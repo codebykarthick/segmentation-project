@@ -16,7 +16,27 @@ test_mask_path = os.path.join(test_path, "label")
 TRAIN_VAL_SPLIT = 0.8
 
 
-class AssignmentDataset(Dataset):
+class ImageDataset(Dataset):
+    def __init__(self, image_dir, transforms=None):
+        super().__init__()
+        self.image_dir = image_dir
+        self.images = sorted(os.listdir(image_dir))
+        self.transforms = transforms
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, index):
+        img_path = os.path.join(self.image_dir, self.images[index])
+        image = Image.open(img_path).convert("RGB")
+
+        if self.transforms:
+            image = self.transforms(image)
+
+        return image
+
+
+class SegmentationDataset(Dataset):
     def __init__(self, image_dir, mask_dir, transforms=None):
         super().__init__()
         self.image_dir = image_dir
@@ -73,14 +93,29 @@ transform = transforms.Compose([
 ])
 
 
-def get_data_loaders():
-    dataset = AssignmentDataset(train_image_path, train_mask_path, transform)
+def get_seg_data_loaders():
+    dataset = SegmentationDataset(train_image_path, train_mask_path, transform)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))
     val_size = len(dataset) - train_size
 
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
-    test_dataset = AssignmentDataset(
+    test_dataset = SegmentationDataset(
         test_image_path, test_mask_path, transform)
+
+    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
+
+    return train_loader, val_loader, test_loader
+
+
+def get_data_loaders():
+    dataset = ImageDataset(train_image_path, transform)
+    train_size = int(TRAIN_VAL_SPLIT * len(dataset))
+    val_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    test_dataset = ImageDataset(test_image_path, transform)
 
     train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
