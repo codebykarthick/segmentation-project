@@ -3,6 +3,9 @@ from PIL import Image
 import shutil
 import torch
 from torchvision import transforms
+from util import logger
+
+log = logger.setup_logger()
 
 # Base paths
 base_path = os.path.join(os.getcwd(), "data")
@@ -49,9 +52,9 @@ def find_max_image_size(image_folder, max_width=0, max_height=0):
 max_width, max_height = find_max_image_size(original_train_img_path, 0, 0)
 max_width, max_height = find_max_image_size(
     original_test_img_path, max_width, max_height)
-image_size = (max_width, max_height)
+image_size = (max_height, max_width)
 
-print(f"Image size after processing: {image_size}")
+log.info(f"Image size after processing (HxW): {image_size}")
 
 
 def process(
@@ -59,15 +62,18 @@ def process(
         base_transform, augmentation_transforms, is_test=False):
     """Actually processes the images and masks. Resizes and augments if not test, 
     only resizes if test."""
-    for file_name in os.listdir(image_folder):
+    for i, file_name in enumerate(os.listdir(image_folder), 1):
+        log.info(
+            f"Processing image {i}/{len(os.listdir(image_folder))}: {file_name}")
         if file_name.endswith(".jpg") or file_name.endswith(".png"):
             image_path = os.path.join(image_folder, file_name)
-            mask_path = os.path.join(mask_folder, file_name)
+            mask_name = file_name.replace(".jpg", ".png")
+            mask_path = os.path.join(mask_folder, mask_name)
 
             # Open images
             image = Image.open(image_path).convert("RGB")
             mask = Image.open(mask_path).convert(
-                "L")  # Convert mask to grayscale
+                "RGB")
 
             # Resize & Save Original Images
             resized_image = base_transform(image)
@@ -79,7 +85,7 @@ def process(
             resized_image_pil.save(os.path.join(
                 output_img_folder, f"resized_{file_name}"))
             resized_mask_pil.save(os.path.join(
-                output_mask_folder, f"resized_{file_name}"))
+                output_mask_folder, f"resized_{mask_name}"))
 
             if not is_test:
                 # Augment images
@@ -98,18 +104,18 @@ def process(
                     augmented_image_pil.save(os.path.join(
                         output_img_folder, f"augmented_{i}_{file_name}"))
                     augmented_mask_pil.save(os.path.join(
-                        output_mask_folder, f"augmented_{i}_{file_name}"))
-    print(
+                        output_mask_folder, f"augmented_{i}_{mask_name}"))
+    log.info(
         f"Processed {len(os.listdir(image_folder))} images in {image_folder}")
 
 
 def preprocess_and_augment():
     """Question 1 solution, process, resize and augment the dataset."""
     if os.path.exists(processed_path):
-        print("Cleaning old processed images folder.")
+        log.info("Cleaning old processed images folder.")
         shutil.rmtree(processed_path)
 
-    print("Creating processed images folder.")
+    log.info("Creating processed images folder.")
     os.makedirs(processed_train_img_path, exist_ok=True)
     os.makedirs(processed_train_mask_path, exist_ok=True)
     os.makedirs(processed_test_img_path, exist_ok=True)
@@ -153,8 +159,9 @@ def preprocess_and_augment():
     process(original_test_img_path, original_test_mask_path, processed_test_img_path,
             processed_test_mask_path, base_transforms, augment_transforms, True)
 
-    print("Dataset preprocessing and augmentation completed!")
+    log.info("Dataset preprocessing and augmentation completed!")
 
 
 if __name__ == "__main__":
+    log.info("Starting dataset preprocessing and augmentation.")
     preprocess_and_augment()

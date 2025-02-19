@@ -20,25 +20,27 @@ class Runner:
 
     def __init__(
             self, model_name, model, device="cuda" if torch.cuda.is_available() else "cpu",
-            type="seg"):
+            model_type="seg"):
         """ Initialize the Runner class, with GPU support if available. """
         self.model_name = model_name
         self.device = device
         self.model = model.to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
 
-        self.type = type
-        if type == "seg":
+        self.type = model_type
+        if self.type == "seg":
+            log.info("Running a segmentation training.")
             self.train_loader, self.val_loader, self.test_loader = get_seg_data_loaders()
             self.criterion = nn.CrossEntropyLoss()
         else:
+            log.info("Running an autoencoder training.")
             self.train_loader, self.val_loader, self.test_loader = get_data_loaders()
             self.criterion = nn.MSELoss()
         self.WEIGHTS_PATH = WEIGHTS_PATH
 
     def train(self, epochs=10):
         """ Train the model. """
-        if self.type == 'seg':
+        if self.type == "seg":
             self.train_seg(epochs)
         else:
             self.train_autoencoder(epochs)
@@ -48,6 +50,7 @@ class Runner:
         self.model.train()
         val_loss = None
         for epoch in range(num_epochs):
+            log.info(f"Autoencoder Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
             for images in self.train_loader:
                 images = images.to(self.device)
@@ -76,6 +79,7 @@ class Runner:
         self.model.train()
         val_loss = None
         for epoch in range(num_epochs):
+            log.info(f"Segmentation Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
             for images, masks in self.train_loader:
                 images, masks = images.to(self.device), masks.to(self.device)
@@ -269,11 +273,13 @@ if __name__ == "__main__":
     model_name = sys.argv[1].lower()
     mode = sys.argv[2].lower()
     epochs = int(sys.argv[3])
+    model_type = "seg"
 
     if model_name == "unet":
         model = UNet(in_channels=3, out_channels=3)
     elif model_name == "autoencoder":
         model = Autoencoder()
+        model_type = "auto"
     elif model_name == "autoencoder_segmentation":
         selected_encoder = load_selected_model(sub_dir="autoencoder")
         if selected_encoder:
