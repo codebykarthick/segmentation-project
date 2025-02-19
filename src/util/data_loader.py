@@ -47,8 +47,13 @@ class AssignmentDataset(Dataset):
         return image, mask
 
     def convert_mask(self, mask):
+        """Convert mask to label
+        0: Background
+        1: Cat
+        2: Dog
+        """
         mask = np.array(mask)
-        label_mask = np.zeros()
+        label_mask = np.zeros(mask.shape[:2], dtype=np.uint8)
 
         # Extract color channels
         red, green, blue = mask[:, :, 0], mask[:, :, 1], mask[:, :, 2]
