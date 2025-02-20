@@ -1,32 +1,58 @@
 import gdown
 import os
 import shutil
+import sys
 import zipfile
 
-DATASET_FILE_URL="https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_00fyC/view?usp=share_link"
-DATA_PATH=os.path.join(os.getcwd(), "data")
-FILE_PATH=os.path.join(DATA_PATH, "cv_dataset.zip")
+DATASET_FILE_URL = "https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_00fyC/view?usp=share_link"
+PROCESSED_URL = "https://drive.google.com/drive/folders/1lfzX20iGHJyr95OBz-LKbmacOAIXDmlG?usp=drive_link"
+data_path = os.path.join(os.getcwd(), "data")
+processed_data_path = os.path.join(os.getcwd(), "data", "processed")
+original_file_path = os.path.join(data_path, "cv_dataset.zip")
+processed_file_path = os.path.join(processed_data_path, "cv_dataset.zip")
 
-def setup_data():
+
+def setup_data(processed=True):
+    """ Download the original or the processed dataset """
     # Check if data folder exists, if yes clean it up.
-    if os.path.exists(DATA_PATH):
+
+    if processed:
+        print("Downloading the processed dataset")
+        path = processed_data_path
+        file_url = PROCESSED_URL
+        file_path = processed_file_path
+    else:
+        print("Downloading the original dataset")
+        path = data_path
+        file_url = DATASET_FILE_URL
+        file_path = original_file_path
+
+    if os.path.exists(path):
         print("Cleaning pre-existing data folder")
-        shutil.rmtree(DATA_PATH)
+        shutil.rmtree(path)
 
     # Create the folder back fresh
-    os.mkdir(DATA_PATH)
+    os.mkdir(path)
     print("Downloading dataset")
     # Download the zip file
-    gdown.download(DATASET_FILE_URL, FILE_PATH, quiet=False, fuzzy=True)
+    gdown.download(DATASET_FILE_URL, file_path, quiet=False, fuzzy=True)
 
     # Extract
     print("Zip downloaded! Extracting...")
-    with zipfile.ZipFile(FILE_PATH, "r") as z:
+    with zipfile.ZipFile(file_path, "r") as z:
         z.extractall("data")
-    
+
     # Clean up the zip file
     print("Zip extracted! Deleting original zip file..")
-    os.remove(FILE_PATH)
+    os.remove(file_path)
+
 
 if __name__ == "__main__":
-    setup_data()
+    data = sys.argv[1]
+
+    if data == "original":
+        setup_data(False)
+    elif data == "processed":
+        setup_data(True)
+    else:
+        print("Invalid argument. Please provide 'original' or 'processed' as argument")
