@@ -5,9 +5,9 @@ import sys
 import zipfile
 
 DATASET_FILE_URL = "https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_00fyC/view?usp=share_link"
-PROCESSED_URL = "https://drive.google.com/drive/folders/1lfzX20iGHJyr95OBz-LKbmacOAIXDmlG?usp=drive_link"
+PROCESSED_URL = "https://drive.google.com/file/d/1eK8tYHxv-jtF1KN-B3M5YHSBdlwILZIz/view?usp=share_link"
 data_path = os.path.join(os.getcwd(), "data")
-processed_data_path = os.path.join(os.getcwd(), "data", "processed")
+processed_data_path = os.path.join(os.getcwd(), "data")
 original_file_path = os.path.join(data_path, "cv_dataset.zip")
 processed_file_path = os.path.join(processed_data_path, "cv_dataset.zip")
 
