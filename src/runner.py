@@ -323,11 +323,11 @@ if __name__ == "__main__":
                 os.path.join(WEIGHTS_PATH, "autoencoder", selected_encoder)))
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
     else:
-        log.error("Invalid model name. Supported: unet, autoencoder")
+        log.error("Invalid model name. Supported: unet, autoencoder, autoencoder_segmentation")
         sys.exit(1)
 
     # Initialize Runner with the model chosen
-    runner = Runner(model_name=model_name, model=model)
+    runner = Runner(model_name=model_name, model=model, model_type=model_type)
 
     if mode == "train":
         log.info("Training and validating model")
