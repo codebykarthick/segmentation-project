@@ -14,6 +14,7 @@ from util.data_loader import get_seg_data_loaders, get_data_loaders
 from util import logger
 
 WEIGHTS_PATH = "weights"
+BATCH_LOG_FREQ = 20
 log = logger.setup_logger()
 
 class Runner:
@@ -54,19 +55,21 @@ class Runner:
         best_val_loss = float('inf')
         for epoch in range(num_epochs):
             epoch_loss = 0
-            scaler = torch.amp.GradScaler(self.device)
+            scaler = torch.amp.GradScaler()
+            toc = time()
 
             for batch_idx, images in enumerate(self.train_loader):
-                toc = time()
+                
                 images = images.to(self.device)
 
                 self.optimizer.zero_grad()
 
-                with torch.amp.autocast(self.device):
+                with torch.amp.autocast(self.device, dtype=torch.float16):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, images)
                 
                 scaler.scale(loss).backward()
+                scaler.unscale_(self.optimizer)
                 scaler.step(self.optimizer)
                 scaler.update()
 
@@ -81,8 +84,11 @@ class Runner:
             val_loss = val_loss if val_loss is not None else 0.0
             epoch_loss /= len(self.train_loader)
 
-            log.info(
-                f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
+            if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
+                tic = time()
+                log.info(
+                    f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
+                toc = time()
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -98,28 +104,32 @@ class Runner:
         best_val_loss = float('inf')
         for epoch in range(num_epochs):
             epoch_loss = 0
-            scaler = torch.amp.GradScaler(self.device)
+            scaler = torch.amp.GradScaler()
 
+            toc = time()
             for batch_idx, (images, masks) in enumerate(self.train_loader):
-                toc = time()
+                
                 images, masks = images.to(self.device), masks.to(self.device)
 
                 self.optimizer.zero_grad()
 
-                with torch.amp.autocast(self.device):
+                with torch.amp.autocast(self.device, dtype=torch.float16):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, masks)
                 
                 scaler.scale(loss).backward()
+                scaler.unscale_(self.optimizer)
                 scaler.step(self.optimizer)
                 scaler.update()
 
                 epoch_loss += loss.item()
-                tic = time()
+                
 
-                # if (batch_idx + 1) % 20 == 0:
-                log.info(
+                if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
+                    tic = time()
+                    log.info(
                         f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {loss.item():.4f}, Time: {(tic - toc):.2f}s")
+                    toc = time()
 
             # Compute validation loss
             val_loss = self.validate()
