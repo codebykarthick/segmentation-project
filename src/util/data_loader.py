@@ -14,6 +14,8 @@ test_image_path = os.path.join(test_path, "color")
 test_mask_path = os.path.join(test_path, "label")
 
 TRAIN_VAL_SPLIT = 0.8
+# Change this if you get OOM errors
+BATCH_SIZE = 16
 
 
 class ImageDataset(Dataset):
@@ -102,9 +104,11 @@ def get_seg_data_loaders():
     test_dataset = SegmentationDataset(
         test_image_path, test_mask_path, transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
+    train_loader = DataLoader(
+        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    test_loader = DataLoader(
+        test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     return train_loader, val_loader, test_loader
 
@@ -117,8 +121,10 @@ def get_data_loaders():
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     test_dataset = ImageDataset(test_image_path, transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=8, shuffle=False)
+    train_loader = DataLoader(
+        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    test_loader = DataLoader(
+        test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     return train_loader, val_loader, test_loader

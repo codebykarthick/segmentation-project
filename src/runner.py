@@ -8,6 +8,7 @@ import sys
 import torch
 import torch.optim as optim
 import torch.nn as nn
+from time import time
 from util.data_loader import get_seg_data_loaders, get_data_loaders
 from util import logger
 
@@ -81,7 +82,8 @@ class Runner:
         for epoch in range(num_epochs):
             log.info(f"Segmentation Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
-            for images, masks in self.train_loader:
+            for batch_idx, (images, masks) in enumerate(self.train_loader):
+                toc = time()
                 images, masks = images.to(self.device), masks.to(self.device)
 
                 self.optimizer.zero_grad()
@@ -91,6 +93,11 @@ class Runner:
                 self.optimizer.step()
 
                 epoch_loss += loss.item()
+                tic = time()
+
+                if (batch_idx + 1) % 20 == 0:
+                    log.info(
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {loss.item():.4f}, Time: {(tic - toc):.2f}s")
 
             # Compute validation loss
             val_loss = self.validate()
