@@ -7,6 +7,7 @@ from models.unet import UNet
 import sys
 import torch
 import torch.optim as optim
+import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from time import time
 from util.data_loader import get_seg_data_loaders, get_data_loaders
@@ -14,7 +15,6 @@ from util import logger
 
 WEIGHTS_PATH = "weights"
 log = logger.setup_logger()
-
 
 class Runner:
     """ Runner class for training and testing UNet and other models. """
@@ -27,6 +27,7 @@ class Runner:
         self.device = device
         self.model = model.to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+        cudnn.benchmark = True
 
         self.type = model_type
         if self.type == "seg":
@@ -50,65 +51,92 @@ class Runner:
         """ Train the model. """
         self.model.train()
         val_loss = None
+        best_val_loss = float('inf')
         for epoch in range(num_epochs):
             log.info(f"Autoencoder Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
-            for images in self.train_loader:
+            scaler = torch.amp.GradScaler(self.device)
+
+            for batch_idx, images in enumerate(self.train_loader):
+                toc = time()
                 images = images.to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(images)
-                loss = self.criterion(outputs, images)
-                loss.backward()
-                self.optimizer.step()
+
+                with torch.amp.autocast(self.device):
+                    outputs = self.model(images)
+                    loss = self.criterion(outputs, images)
+                
+                scaler.scale(loss).backward()
+                scaler.step(self.optimizer)
+                scaler.update()
 
                 epoch_loss += loss.item()
+                tic = time()
+
+                log.info(
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {loss.item():.4f}, Time: {(tic - toc):.2f}s")
 
             # Compute validation loss
             val_loss = self.validate_autoencoder()
             val_loss = val_loss if val_loss is not None else 0.0
+            epoch_loss /= len(self.train_loader)
 
             log.info(
                 f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
-        # Save model with model name and timestamp at the end of training
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.save_model(
-            f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                # Save model whenever it is better than our current best
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                self.save_model(
+                    f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
 
     def train_seg(self, num_epochs=10):
         """ Train the model. """
         self.model.train()
         val_loss = None
+        best_val_loss = float('inf')
         for epoch in range(num_epochs):
             log.info(f"Segmentation Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
+            scaler = torch.amp.GradScaler(self.device)
+
             for batch_idx, (images, masks) in enumerate(self.train_loader):
                 toc = time()
                 images, masks = images.to(self.device), masks.to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.model(images)
-                loss = self.criterion(outputs, masks)
-                loss.backward()
-                self.optimizer.step()
+
+                with torch.amp.autocast(self.device):
+                    outputs = self.model(images)
+                    loss = self.criterion(outputs, masks)
+                
+                scaler.scale(loss).backward()
+                scaler.step(self.optimizer)
+                scaler.update()
 
                 epoch_loss += loss.item()
                 tic = time()
 
-                if (batch_idx + 1) % 20 == 0:
-                    log.info(
+                # if (batch_idx + 1) % 20 == 0:
+                log.info(
                         f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {loss.item():.4f}, Time: {(tic - toc):.2f}s")
 
             # Compute validation loss
             val_loss = self.validate()
             val_loss = val_loss if val_loss is not None else 0.0
+            epoch_loss /= len(self.train_loader)
 
             log.info(
                 f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
-        # Save model with model name and timestamp at the end of training
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.save_model(
-            f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
+            
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                # Save model whenever it is better than our current best
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                self.save_model(
+                    f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
 
     def validate(self):
         """ Compute validation loss. """

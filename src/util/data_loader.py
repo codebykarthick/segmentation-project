@@ -3,6 +3,7 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms
+from torchvision.transforms import InterpolationMode
 from PIL import Image
 
 
@@ -15,7 +16,7 @@ test_mask_path = os.path.join(test_path, "label")
 
 TRAIN_VAL_SPLIT = 0.8
 # Change this if you get OOM errors
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 
 
 class ImageDataset(Dataset):
@@ -39,13 +40,13 @@ class ImageDataset(Dataset):
 
 
 class SegmentationDataset(Dataset):
-    def __init__(self, image_dir, mask_dir, transforms=None):
+    def __init__(self, image_dir, mask_dir, defined_transforms=None):
         super().__init__()
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.images = sorted(os.listdir(image_dir))
         self.masks = sorted(os.listdir(mask_dir))
-        self.transforms = transforms
+        self.transforms = defined_transforms
 
     def __len__(self):
         return len(self.images)
@@ -59,11 +60,11 @@ class SegmentationDataset(Dataset):
         image = Image.open(img_path).convert("RGB")
         # Color of Mask classifies if its cat or dog
         mask = Image.open(mask_path).convert("RGB")
-        mask = self.convert_mask(mask)
-
+        
         if self.transforms:
             image = self.transforms(image)
-
+            
+        mask = self.convert_mask(mask)
         mask = torch.from_numpy(mask).long()
 
         return image, mask
