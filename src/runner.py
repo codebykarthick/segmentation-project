@@ -53,7 +53,6 @@ class Runner:
         val_loss = None
         best_val_loss = float('inf')
         for epoch in range(num_epochs):
-            log.info(f"Autoencoder Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
             scaler = torch.amp.GradScaler(self.device)
 
@@ -98,7 +97,6 @@ class Runner:
         val_loss = None
         best_val_loss = float('inf')
         for epoch in range(num_epochs):
-            log.info(f"Segmentation Epoch {epoch+1}/{num_epochs}")
             epoch_loss = 0
             scaler = torch.amp.GradScaler(self.device)
 
