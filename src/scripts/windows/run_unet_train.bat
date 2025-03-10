@@ -1,5 +1,4 @@
 cd ..\..
-conda activate cv
 
 python runner.py unet train 10
 
