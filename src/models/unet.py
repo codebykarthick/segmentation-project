@@ -109,33 +109,22 @@ class UNetDecoder(nn.Module):
     def forward(self, x, skip_connections, original_size):
         """Decoder forward pass with skip connections."""
         x = self.upconv1(x)
-        x = F.interpolate(
-            x, size=skip_connections[3].shape[2:], mode="bilinear", align_corners=False)
         x = torch.cat((x, skip_connections[3]), dim=1)
         x = self.dec1(x)
 
         x = self.upconv2(x)
-        x = F.interpolate(
-            x, size=skip_connections[2].shape[2:], mode="bilinear", align_corners=False)
         x = torch.cat((x, skip_connections[2]), dim=1)
         x = self.dec2(x)
 
         x = self.upconv3(x)
-        x = F.interpolate(
-            x, size=skip_connections[1].shape[2:], mode="bilinear", align_corners=False)
         x = torch.cat((x, skip_connections[1]), dim=1)
         x = self.dec3(x)
 
         x = self.upconv4(x)
-        x = F.interpolate(
-            x, size=skip_connections[0].shape[2:], mode="bilinear", align_corners=False)
         x = torch.cat((x, skip_connections[0]), dim=1)
         x = self.dec4(x)
 
         x = self.segmentation(x)
-
-        x = F.interpolate(x, size=original_size,
-                          mode="bilinear", align_corners=False)
 
         return x
 
