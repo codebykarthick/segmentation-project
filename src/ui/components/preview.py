@@ -42,12 +42,12 @@ def insert_image_into_preview(selected_file, is_prompt):
     with dpg.texture_registry():
         width, height, _, data = dpg.load_image(selected_file)
         dpg.add_static_texture(width, height, data, tag="preview_texture")
-        preview_width = width
-        preview_height = height
+        preview_width = width * 2
+        preview_height = height * 2
         prompt_mode = is_prompt
 
     dpg.add_image("preview_texture", parent="img_preview",
-                  tag="preview_image")
+                  tag="preview_image", width=preview_width, height=preview_height)
 
     added_pixels = []
 
@@ -67,8 +67,7 @@ def on_mouse_drag(sender, app_data):
     """
     if dpg.is_key_down(dpg.mvKey_LShift) or dpg.is_key_down(dpg.mvKey_RShift):
         x, y = dpg.get_mouse_pos(local=True)
-        x -= 10
-        y -= 10
+        x, y = (x-10)/2, (y-10)/2 # To account for the border offset and preview zooming.
         if ((x > 0 and x <= preview_width) and (y > 0 and y <= preview_height)):
             added_pixels.append((x, y))
 
