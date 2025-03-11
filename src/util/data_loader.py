@@ -16,7 +16,7 @@ test_mask_path = os.path.join(test_path, "label")
 
 TRAIN_VAL_SPLIT = 0.8
 # Change this if you get OOM errors
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 
 
 class ImageDataset(Dataset):

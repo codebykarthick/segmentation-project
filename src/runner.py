@@ -27,7 +27,7 @@ class Runner:
         self.model_name = model_name
         self.device = device
         self.model = model.to(self.device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
         cudnn.benchmark = True
 
         self.type = model_type
@@ -74,21 +74,18 @@ class Runner:
                 scaler.update()
 
                 epoch_loss += loss.item()
-                tic = time()
 
-                log.info(
-                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {loss.item():.4f}, Time: {(tic - toc):.2f}s")
+
+                if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
+                    tic = time()
+                    log.info(
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
+                    toc = time()
 
             # Compute validation loss
             val_loss = self.validate_autoencoder()
             val_loss = val_loss if val_loss is not None else 0.0
             epoch_loss /= len(self.train_loader)
-
-            if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
-                tic = time()
-                log.info(
-                    f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
-                toc = time()
 
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -128,7 +125,7 @@ class Runner:
                 if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
                     tic = time()
                     log.info(
-                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {loss.item():.4f}, Time: {(tic - toc):.2f}s")
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / batch_idx + 1):.4f}, Time: {(tic - toc):.2f}s")
                     toc = time()
 
             # Compute validation loss
@@ -178,15 +175,22 @@ class Runner:
             return
 
         self.load_model(model_path)
+        log.info("Loaded model for test dataset.")
         self.model.eval()
         total_loss = 0
         with torch.no_grad():
-            for images in self.test_loader:
+            for batch_id, (images) in enumerate(self.test_loader):
                 images = images.to(self.device)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, images)
                 total_loss += loss.item()
-        log.info(f"Test Loss: {total_loss:.4f}")
+
+                if (batch_id + 1) % BATCH_LOG_FREQ == 0:
+                    log.info(f"Batches evaluated: [{batch_id + 1}/{len(self.test_loader)}], current test loss: {(total_loss/(batch_id + 1)):.4f}")
+            
+            total_loss /= len(self.test_loader)
+        log.info(f"Avg Test Loss: {total_loss:.4f}")
+        
 
     def test_seg(self, model_path):
         """ Test the segmentation model. """
@@ -195,15 +199,20 @@ class Runner:
             return
 
         self.load_model(model_path)
+        log.info("Loaded model for test dataset.")
         self.model.eval()
         total_loss = 0
         with torch.no_grad():
-            for images, masks in self.test_loader:
+            for batch_id, (images, masks) in enumerate(self.test_loader):
                 images, masks = images.to(self.device), masks.to(self.device)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, masks)
                 total_loss += loss.item()
-        log.info(f"Test Loss: {total_loss:.4f}")
+
+                if (batch_id + 1) % BATCH_LOG_FREQ == 0:
+                    log.info(f"Batches evaluated: [{batch_id + 1}/{len(self.test_loader)}], current test loss: {total_loss/(batch_id + 1)}")
+            total_loss /= len(self.test_loader)
+        log.info(f"Avg Test Loss: {total_loss:.4f}")
 
     def save_model(self, file_name="unet_checkpoint.pth"):
         """ Save model weights. """
@@ -304,6 +313,8 @@ def load_selected_model(sub_dir=""):
     # Launch interactive selection
     selected_weight = curses.wrapper(select_model_weight, weights)
     log.info(f"Selected model: {selected_weight}")
+    selected_weight = os.path.join(os.getcwd(), WEIGHTS_PATH, sub_dir, selected_weight)
+    log.info(f"Full path of weight: {selected_weight}")
 
     return selected_weight
 
@@ -315,7 +326,6 @@ if __name__ == "__main__":
 
     model_name = sys.argv[1].lower()
     mode = sys.argv[2].lower()
-    epochs = int(sys.argv[3])
     model_type = "seg"
 
     if model_name == "unet":
@@ -338,13 +348,14 @@ if __name__ == "__main__":
     runner = Runner(model_name=model_name, model=model, model_type=model_type)
 
     if mode == "train":
+        epochs = int(sys.argv[3])
         log.info("Training and validating model")
         runner.train(epochs=epochs)
     elif mode == "test":
         log.info("Evaluating trained model on test set")
         selected_model = load_selected_model(sub_dir=model_name)
         if selected_model:
-            runner.test(os.path.join(WEIGHTS_PATH, selected_model))
+            runner.test(selected_model)
     else:
         log.error("Invalid mode provided. Use 'train' or 'test'.")
         sys.exit(1)
