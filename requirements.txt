@@ -4,3 +4,5 @@ torchvision==0.20.1
 torchaudio==2.5.1
 cpuonly==2.0
 dearpygui==2.0.0
+scikit-image==0.25.2
+opencv-python==4.11.0.86
