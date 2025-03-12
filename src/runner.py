@@ -1,4 +1,3 @@
-import curses
 from datetime import datetime
 import os
 from models.autoencoder import Autoencoder
@@ -10,24 +9,26 @@ import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from time import time
+from util.constants import CONSTANTS
 from util.data_loader import get_seg_data_loaders, get_data_loaders
+from util.model_handler import load_selected_model
 from util import logger
 
-WEIGHTS_PATH = "weights"
-BATCH_LOG_FREQ = 20
 log = logger.setup_logger()
+
 
 class Runner:
     """ Runner class for training and testing UNet and other models. """
 
     def __init__(
-            self, model_name, model, device="cuda" if torch.cuda.is_available() else "cpu",
+            self, model_name, model,
             model_type="seg"):
         """ Initialize the Runner class, with GPU support if available. """
         self.model_name = model_name
-        self.device = device
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=1e-4)
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=CONSTANTS["LEARNING_RATE"])
         cudnn.benchmark = True
 
         self.type = model_type
@@ -39,7 +40,6 @@ class Runner:
             log.info("Running an autoencoder training.")
             self.train_loader, self.val_loader, self.test_loader = get_data_loaders()
             self.criterion = nn.MSELoss()
-        self.WEIGHTS_PATH = WEIGHTS_PATH
 
     def train(self, epochs=10):
         """ Train the model. """
@@ -59,7 +59,7 @@ class Runner:
             toc = time()
 
             for batch_idx, images in enumerate(self.train_loader):
-                
+
                 images = images.to(self.device)
 
                 self.optimizer.zero_grad()
@@ -67,7 +67,7 @@ class Runner:
                 with torch.amp.autocast(self.device, dtype=torch.float16):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, images)
-                
+
                 scaler.scale(loss).backward()
                 scaler.unscale_(self.optimizer)
                 scaler.step(self.optimizer)
@@ -75,8 +75,7 @@ class Runner:
 
                 epoch_loss += loss.item()
 
-
-                if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
+                if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
                     tic = time()
                     log.info(
                         f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
@@ -105,7 +104,7 @@ class Runner:
 
             toc = time()
             for batch_idx, (images, masks) in enumerate(self.train_loader):
-                
+
                 images, masks = images.to(self.device), masks.to(self.device)
 
                 self.optimizer.zero_grad()
@@ -113,16 +112,15 @@ class Runner:
                 with torch.amp.autocast(self.device, dtype=torch.float16):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, masks)
-                
+
                 scaler.scale(loss).backward()
                 scaler.unscale_(self.optimizer)
                 scaler.step(self.optimizer)
                 scaler.update()
 
                 epoch_loss += loss.item()
-                
 
-                if (batch_idx + 1) % BATCH_LOG_FREQ == 0:
+                if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
                     tic = time()
                     log.info(
                         f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / batch_idx + 1):.4f}, Time: {(tic - toc):.2f}s")
@@ -135,7 +133,7 @@ class Runner:
 
             log.info(
                 f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
-            
+
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 # Save model whenever it is better than our current best
@@ -185,12 +183,12 @@ class Runner:
                 loss = self.criterion(outputs, images)
                 total_loss += loss.item()
 
-                if (batch_id + 1) % BATCH_LOG_FREQ == 0:
-                    log.info(f"Batches evaluated: [{batch_id + 1}/{len(self.test_loader)}], current test loss: {(total_loss/(batch_id + 1)):.4f}")
-            
+                if (batch_id + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
+                    log.info(
+                        f"Batches evaluated: [{batch_id + 1}/{len(self.test_loader)}], current test loss: {(total_loss/(batch_id + 1)):.4f}")
+
             total_loss /= len(self.test_loader)
         log.info(f"Avg Test Loss: {total_loss:.4f}")
-        
 
     def test_seg(self, model_path):
         """ Test the segmentation model. """
@@ -209,17 +207,18 @@ class Runner:
                 loss = self.criterion(outputs, masks)
                 total_loss += loss.item()
 
-                if (batch_id + 1) % BATCH_LOG_FREQ == 0:
-                    log.info(f"Batches evaluated: [{batch_id + 1}/{len(self.test_loader)}], current test loss: {total_loss/(batch_id + 1)}")
+                if (batch_id + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
+                    log.info(
+                        f"Batches evaluated: [{batch_id + 1}/{len(self.test_loader)}], current test loss: {total_loss/(batch_id + 1)}")
             total_loss /= len(self.test_loader)
         log.info(f"Avg Test Loss: {total_loss:.4f}")
 
     def save_model(self, file_name="unet_checkpoint.pth"):
         """ Save model weights. """
-        if not os.path.exists(self.WEIGHTS_PATH):
-            os.makedirs(self.WEIGHTS_PATH)
+        if not os.path.exists(CONSTANTS["WEIGHTS_PATH"]):
+            os.makedirs(CONSTANTS["WEIGHTS_PATH"])
 
-        actual_path = os.path.join(self.WEIGHTS_PATH, self.model_name)
+        actual_path = os.path.join(CONSTANTS["WEIGHTS_PATH"], self.model_name)
         if not os.path.exists(actual_path):
             os.makedirs(actual_path)
 
@@ -239,84 +238,29 @@ class Runner:
         if self.model_name == "autoencoder_segmentation":
             # Load encoder weights separately
             encoder_file = os.path.join(
-                self.WEIGHTS_PATH, self.model_name, "encoder_" + file_name)
+                CONSTANTS["WEIGHTS_PATH"], self.model_name, "encoder_" + file_name)
             decoder_file = os.path.join(
-                self.WEIGHTS_PATH, self.model_name, "decoder_" + file_name)
+                CONSTANTS["WEIGHTS_PATH"], self.model_name, "decoder_" + file_name)
             if not os.path.exists(encoder_file) or not os.path.exists(decoder_file):
                 log.error(
                     "Model weights not found: {encoder_file}, {decoder_file}")
                 return
 
-            self.model.encoder.load_state_dict(torch.load(encoder_file))
-            self.model.decoder.load_state_dict(torch.load(decoder_file))
+            self.model.encoder.load_state_dict(
+                torch.load(encoder_file, map_location=self.device))
+            self.model.decoder.load_state_dict(
+                torch.load(decoder_file, map_location=self.device))
             self.model.eval()
             return
 
-        file_path = os.path.join(self.WEIGHTS_PATH, file_name)
+        file_path = os.path.join(CONSTANTS["WEIGHTS_PATH"], file_name)
         if not os.path.exists(file_path):
             log.error(f"Model weights not found: {file_path}")
             return
 
         self.model.load_state_dict(torch.load(
-            os.path.join(self.WEIGHTS_PATH, file_name)))
+            os.path.join(CONSTANTS["WEIGHTS_PATH"], file_name), map_location=self.device))
         self.model.eval()
-
-
-def list_model_weights(extension=".pth", sub_dir=""):
-    """ List all available model weights in the given directory. """
-    actual_path = os.path.join(WEIGHTS_PATH, sub_dir)
-    if not os.path.exists(actual_path):
-        log.error("No weights directory found.")
-        return []
-
-    # Hacky way to remove encoder_ and decoder_ prefixes for autoencoder_segmentation
-    return [f.replace("encoder_", "").replace("decoder_", "") for f in sorted(os.listdir(actual_path)) if f.endswith(extension)]
-
-
-def select_model_weight(stdscr, weights):
-    """ Interactive model selection using arrow keys. """
-    curses.curs_set(0)  # Hide cursor
-    idx = 0  # Start selection at first item
-
-    while True:
-        stdscr.clear()
-        stdscr.addstr("Select a model weight file:\n", curses.A_BOLD)
-
-        # Display weight files
-        for i, weight in enumerate(weights):
-            if i == idx:
-                # Highlight selected
-                stdscr.addstr(f"> {weight}\n", curses.A_REVERSE)
-            else:
-                stdscr.addstr(f"  {weight}\n")
-
-        stdscr.refresh()
-
-        key = stdscr.getch()
-
-        if key == curses.KEY_UP and idx > 0:
-            idx -= 1
-        elif key == curses.KEY_DOWN and idx < len(weights) - 1:
-            idx += 1
-        elif key in [curses.KEY_ENTER, 10, 13]:  # Enter key pressed
-            return weights[idx]
-
-
-def load_selected_model(sub_dir=""):
-    """ Display model weights and let user select one. """
-    weights = list_model_weights(sub_dir=sub_dir)
-
-    if not weights:
-        log.error("No model weights found!")
-        return None
-
-    # Launch interactive selection
-    selected_weight = curses.wrapper(select_model_weight, weights)
-    log.info(f"Selected model: {selected_weight}")
-    selected_weight = os.path.join(os.getcwd(), WEIGHTS_PATH, sub_dir, selected_weight)
-    log.info(f"Full path of weight: {selected_weight}")
-
-    return selected_weight
 
 
 if __name__ == "__main__":
@@ -338,10 +282,11 @@ if __name__ == "__main__":
         if selected_encoder:
             encoder = Autoencoder()
             encoder.load_state_dict(torch.load(
-                os.path.join(WEIGHTS_PATH, "autoencoder", selected_encoder)))
+                os.path.join(CONSTANTS["WEIGHTS_PATH"], "autoencoder", selected_encoder)))
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
     else:
-        log.error("Invalid model name. Supported: unet, autoencoder, autoencoder_segmentation")
+        log.error(
+            "Invalid model name. Supported: unet, autoencoder, autoencoder_segmentation")
         sys.exit(1)
 
     # Initialize Runner with the model chosen
