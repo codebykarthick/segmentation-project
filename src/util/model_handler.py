@@ -1,9 +1,9 @@
 import curses
-from constants import CONSTANTS
-import logger
+from .constants import CONSTANTS
+from .logger import setup_logger
 import os
 
-log = logger.setup_logger()
+log = setup_logger()
 
 
 def list_model_weights(extension=".pth", sub_dir=""):
