@@ -6,3 +6,4 @@ cpuonly==2.0
 dearpygui==2.0.0
 scikit-image==0.25.2
 opencv-python==4.11.0.86
+openai-clip==1.0.1

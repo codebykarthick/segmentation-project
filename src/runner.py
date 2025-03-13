@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 from models.autoencoder import Autoencoder
 from models.autoencoder_segmentation import AutoEncoderSegmentation
+from models.clip_segmentation import ClipSegmentation
 from models.unet import UNet
 import sys
 import torch
@@ -284,6 +285,9 @@ if __name__ == "__main__":
             encoder.load_state_dict(torch.load(
                 os.path.join(CONSTANTS["WEIGHTS_PATH"], "autoencoder", selected_encoder)))
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
+    elif model_name == "clip_segmentation":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = ClipSegmentation(device=device)
     else:
         log.error(
             "Invalid model name. Supported: unet, autoencoder, autoencoder_segmentation")
