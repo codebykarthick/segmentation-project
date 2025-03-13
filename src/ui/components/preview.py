@@ -1,11 +1,14 @@
 import dearpygui.dearpygui as dpg
+import numpy as np
 from ui.components.config import get_config
+from util.logger import setup_logger
 
 config = get_config()
 preview_width = None
 preview_height = None
 prompt_mode = False
 added_pixels = []
+log = setup_logger()
 
 
 def create_preview():
@@ -29,6 +32,26 @@ def clear_prompt(sender, app_data):
     global added_pixels
     added_pixels = []
     draw_overlay()
+
+
+def generate_prompt():
+    global added_pixels
+    width, height = preview_width // 2, preview_height // 2
+    np.set_printoptions(threshold=np.inf, linewidth=200, suppress=True)
+    prompt = np.zeros(shape=(width, height))
+    brush_radius = config["brush_size"]
+
+    log.info(f"Creating mask of size: ({width}x{height})")
+
+    for (x, y) in added_pixels:
+        x, y = int(x/2), int(y/2)  # Ensure integer indexing
+        for dx in range(-brush_radius, brush_radius + 1):
+            for dy in range(-brush_radius, brush_radius + 1):
+                if 0 <= x + dx < width and 0 <= y + dy < height:
+                    # Mark the pixel and surrounding area as 1
+                    prompt[y + dy, x + dx] = 1
+
+    return prompt
 
 
 def insert_image_into_preview(selected_file, is_prompt):
@@ -67,7 +90,8 @@ def on_mouse_drag(sender, app_data):
     """
     if dpg.is_key_down(dpg.mvKey_LShift) or dpg.is_key_down(dpg.mvKey_RShift):
         x, y = dpg.get_mouse_pos(local=True)
-        x, y = (x-10)/2, (y-10)/2 # To account for the border offset and preview zooming.
+        # To account for the border offset and preview zooming.
+        x, y = (x-10), (y-10)
         if ((x > 0 and x <= preview_width) and (y > 0 and y <= preview_height)):
             added_pixels.append((x, y))
 

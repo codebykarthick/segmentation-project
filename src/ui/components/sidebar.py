@@ -1,6 +1,6 @@
 import dearpygui.dearpygui as dpg
 from ui.components.config import get_config
-from ui.components.preview import insert_image_into_preview, clear_prompt
+from ui.components.preview import insert_image_into_preview, clear_prompt, generate_prompt
 from util.logger import setup_logger
 
 log = setup_logger()
@@ -19,7 +19,6 @@ def sidebar_callback(sender, app_data):
         prompt_mode = True
         dpg.set_value("instruction_text",
                       "Hold Shift & Drag to highlight areas")
-        dpg.configure_item("prompt_btn", show=True)
         dpg.configure_item("clr_prompt_btn", show=True)
     else:
         prompt_mode = False
@@ -56,7 +55,10 @@ def segment_image_callback(sender, app_data):
     """
     Runs the segmentation model and replaces the image with the segmentation result
     """
-    log.info("Image segmentation initiated!")
+    log.info("Capturing user highlighted prompt")
+
+    # Check if this prompt is accurate for the provided image by dumping
+    prompt = generate_prompt()
 
 
 def create_sidebar():
@@ -75,11 +77,8 @@ def create_sidebar():
             dpg.add_spacer(height=config["spacer"])
             dpg.add_text("Selected File: ", tag="selected_file_text", wrap=250)
             dpg.add_spacer(height=config["spacer"])
-            dpg.add_button(label="Generate prompt", indent=55,
-                           show=False, tag="prompt_btn")
-            dpg.add_spacer(height=config["spacer"])
             dpg.add_button(label="Clear Prompt", indent=60,
                            show=False, tag="clr_prompt_btn", callback=clear_prompt)
             dpg.add_spacer(height=config["spacer"])
-            dpg.add_button(label="Run Segmentation", indent=50,
+            dpg.add_button(label="Run Segmentation\n  on Selection", indent=50,
                            callback=segment_image_callback)
