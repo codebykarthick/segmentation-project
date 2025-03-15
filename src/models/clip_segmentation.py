@@ -86,7 +86,4 @@ class ClipSegmentation(nn.Module):
         # 6) Pass through the segmentation decoder
         out = self.post_clip_conv(feat)
 
-        out = F.interpolate(out, size=(original_h, original_w),
-                            mode='bilinear', align_corners=False)
-
         return out

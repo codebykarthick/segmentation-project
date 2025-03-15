@@ -33,7 +33,7 @@ def iou(pred_mask, actual_mask, num_classes=3):
     if not iou_scores:
         return 0.0
     # Flatten the list of tensors and compute the average
-    print(iou_scores)
+    # print(iou_scores)
     return torch.cat(iou_scores, dim=0).mean().item()
 
 

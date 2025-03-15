@@ -45,12 +45,15 @@ class EvaluationRunner:
 
         for metric in metrics:
             if metric == "metrics_iou":
+                log.info("Calculating the average IoU on test set without any perturbations.")
                 value = self.get_average_iou()
             elif metric == "metrics_dice":
+                log.info("Calculating the average dice coefficient on test set without any perturbations.")
                 value = self.get_average_dice()
             elif metric == "metrics_pixel-accuracy":
+                log.info("Calculating the average pixel accuracy on test set without any perturbations.")
                 value = self.get_average_p_acc()
-            results["metrics"][metric.split("_")[0]] = value
+            results["metrics"][metric.split("_")[1]] = value
 
         self.update_results_json(results)
 
@@ -207,9 +210,13 @@ class EvaluationRunner:
         Args:
             current_dict (dict): Dictionary containing new key-value pairs to be added.
         """
+        # Check if results directory exists, if not create it
+        if not os.path.exists("results"):
+            os.makedirs("results")
         # Check if file exists and load previous data
-        if os.path.exists(self.results_file):
-            with open(self.results_file, "r") as f:
+        results_path = os.path.join("results", self.results_file)
+        if os.path.exists(results_path):
+            with open(results_path, "r") as f:
                 try:
                     results_data = json.load(f)
                 except json.JSONDecodeError:
@@ -221,10 +228,10 @@ class EvaluationRunner:
         results_data.update(current_dict)
 
         # Write back to the file
-        with open(self.results_file, "w") as f:
+        with open(results_path, "w") as f:
             json.dump(results_data, f, indent=4)
 
-        log.info(f"Results JSON updated: {self.results_file}")
+        log.info(f"Results JSON updated: {results_path}")
 
 
 if __name__ == "__main__":
@@ -234,12 +241,11 @@ if __name__ == "__main__":
                      "gaussian_noise", "s&p", "gaussian_blur", "brightness_inc", "brightness_dec"]
     parser = argparse.ArgumentParser(description="Evaluate model robustness")
 
-    parser.add_argument("model_name", type=str,
+    parser.add_argument("--model_name", type=str,
                         help=f"Name of the model. Allowed options: {', '.join(allowed_models)}",
                         default="unet", choices=allowed_models)
-    parser.add_argument("eval_methods", nargs="+",
-                        help=f"List of eval methods. Allowed options: {', '.join(allowed_evals)}",
-                        required=True)
+    parser.add_argument("--eval_methods", nargs="+",
+                        help=f"List of eval methods. Allowed options: {', '.join(allowed_evals)}")
 
     args = parser.parse_args()
 
