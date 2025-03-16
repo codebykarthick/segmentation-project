@@ -11,4 +11,5 @@ cv_dataset.zip
 logs/
 __MAC_OSX/
 weights/
+tmp/
 results/

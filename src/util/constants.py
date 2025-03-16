@@ -1,6 +1,7 @@
 CONSTANTS = {
     "WEIGHTS_PATH": "weights",
     "RESULTS_PATH": "results",
+    "TMP_PATH": "tmp",
     "BATCH_LOG_FREQ": 20,
     "LEARNING_RATE": 1e-4,
     "GAUSSIAN_NOISE_RANGE": [0, 2, 4, 6, 8, 10, 12, 14, 16, 18],
