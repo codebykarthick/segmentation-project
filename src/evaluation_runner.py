@@ -13,6 +13,7 @@ from util.constants import CONSTANTS
 from util.data_loader import get_seg_data_loaders, get_data_loaders
 from util.model_handler import load_selected_model
 import json
+from tqdm import tqdm
 
 log = logger.setup_logger()
 
@@ -37,7 +38,7 @@ class EvaluationRunner:
     def load_model(self, model_path):
         log.info(f"Loading model weights from: {model_path}")
         self.model.load_state_dict(torch.load(
-            model_path, map_location=self.device))
+            model_path, weights_only=True, map_location=self.device))
 
     def calculate_metrics(self, metrics=[]):
         results = {}
@@ -45,81 +46,71 @@ class EvaluationRunner:
 
         for metric in metrics:
             if metric == "metrics_iou":
-                log.info("Calculating the average IoU on test set without any perturbations.")
-                value = self.get_average_iou()
+                log.info(
+                    "Calculating the average IoU on test set without any perturbations.")
+                values = self.get_average_metric(iou)
             elif metric == "metrics_dice":
-                log.info("Calculating the average dice coefficient on test set without any perturbations.")
-                value = self.get_average_dice()
+                log.info(
+                    "Calculating the average dice coefficient on test set without any perturbations.")
+                values = self.get_average_metric(dice)
             elif metric == "metrics_pixel-accuracy":
-                log.info("Calculating the average pixel accuracy on test set without any perturbations.")
-                value = self.get_average_p_acc()
-            results["metrics"][metric.split("_")[1]] = value
+                log.info(
+                    "Calculating the average pixel accuracy on test set without any perturbations.")
+                values = self.get_average_metric(pixel_accuracy)
+            results["metrics"][metric.split("_")[1]] = {
+                "background": values.get(0, 0),
+                "cat": values.get(1, 0),
+                "dog": values.get(2, 0),
+                "mean": (sum(value for value in values.values() if value is not None) / len(values)) if values else 0
+            }
 
         self.update_results_json(results)
 
-    def get_average_iou(self):
+    def get_average_metric(self, metric_fn, transforms=None, is_occlusion=False):
         """
-        Computes the average Intersection over Union (IoU) for the test dataset.
+        Computes the average value for a given metric function (IoU, Dice, or Pixel Accuracy).
+
+        Args:
+            metric_fn (function): The metric function to apply.
+            transforms: Any transforms to apply
+            is_occlusion: Boolean to decide if occlusion needs to be applied or not.
 
         Returns:
-            float: The average IoU score.
+            dict: A dictionary containing the average metric score for each class.
         """
-        total_iou = 0.0
-        num_samples = 0
+        total_metric = {}  # Dictionary to store metric for each class
+        num_samples = {}  # Dictionary to track number of samples per class
         self.model.eval()
         with torch.no_grad():
-            for images, masks in self.test_loader:
+            for images, masks in tqdm(self.test_loader, desc='Processing batches'):
                 images, masks = images.to(self.device), masks.to(self.device)
+
+                # If occlusion apply the method directly
+                if is_occlusion:
+                    images, masks = apply_occlusion(images, masks)
+                elif transforms:
+                    images = transforms(images)
+
                 preds = self.model(images)
-                preds = torch.argmax(preds, dim=1)  # Convert to class indices
+                # Convert logits to probabilities
+                preds = torch.softmax(preds, dim=1)
+                preds = torch.argmax(preds, dim=1)
 
-                total_iou += iou(preds, masks)  # Compute IoU
-                num_samples += 1
+                # Iterate the batch for the individual scores
+                for i in range(masks.shape[0]):
+                    metric_scores = metric_fn(preds[i], masks[i])
+                    for cls, score in metric_scores.items():
+                        if cls in total_metric:
+                            total_metric[cls] += score
+                        else:
+                            total_metric[cls] = score
+                    for cls in metric_scores.keys():
+                        if cls in num_samples:
+                            num_samples[cls] += 1
+                        else:
+                            num_samples[cls] = 1
 
-        return total_iou / num_samples if num_samples > 0 else 0.0
-
-    def get_average_dice(self):
-        """
-        Computes the average Dice coefficient for the test dataset.
-
-        Returns:
-            float: The average Dice score.
-        """
-        total_dice = 0.0
-        num_samples = 0
-        self.model.eval()
-        with torch.no_grad():
-            for images, masks in self.test_loader:
-                images, masks = images.to(self.device), masks.to(self.device)
-                preds = self.model(images)
-                preds = torch.argmax(preds, dim=1)  # Convert to class indices
-
-                total_dice += dice(preds, masks)  # Compute Dice coefficient
-                num_samples += 1
-
-        return total_dice / num_samples if num_samples > 0 else 0.0
-
-    def get_average_p_acc(self):
-        """
-        Computes the average Pixel accuracy for the test dataset.
-
-        Returns:
-            float: The average pixel accuracy.
-        """
-        total_dice = 0.0
-        num_samples = 0
-        self.model.eval()
-        with torch.no_grad():
-            for images, masks in self.test_loader:
-                images, masks = images.to(self.device), masks.to(self.device)
-                preds = self.model(images)
-                preds = torch.argmax(preds, dim=1)  # Convert to class indices
-
-                # Compute Pixel accuracy
-                total_pixel_accuracy += pixel_accuracy(preds, masks)
-                num_samples += 1
-
-        return total_pixel_accuracy / num_samples if num_samples > 0 else 0.0
+        return {cls: total_metric[cls] / num_samples[cls] for cls in total_metric if cls in num_samples} if num_samples else {}
 
     def calculate_metrics_on_methods(self, methods=[]):
         """
@@ -171,33 +162,10 @@ class EvaluationRunner:
             self.update_results_json(results)
 
     def test_perturbation(self, method, strn, results, transforms, is_occlusion=False):
-        total_iou = 0.0
-        total_dice = 0.0
-        total_acc = 0.0
-        num_samples = 0
-        self.model.eval()
-
-        with torch.no_grad():
-            for images, masks in self.test_loader:
-                images, masks = images.to(self.device), masks.to(self.device)
-
-                # If occlusion apply the method directly
-                if is_occlusion:
-                    images, masks = apply_occlusion(images, masks)
-                else:
-                    images = transforms(images)
-
-                preds = self.model(images)
-                preds = torch.argmax(preds, dim=1)  # Convert to class indices
-
-                total_iou += iou(preds, masks)
-                total_dice += dice(preds, masks)
-                total_acc += pixel_accuracy(preds, masks)
-                num_samples += 1
-
-        m_iou = total_iou / num_samples
-        m_dice = total_dice / num_samples
-        m_p_acc = total_acc / num_samples
+        m_iou = self.get_average_metric(iou, transforms, is_occlusion)
+        m_dice = self.get_average_metric(dice, transforms, is_occlusion)
+        m_p_acc = self.get_average_metric(
+            pixel_accuracy, transforms, is_occlusion)
 
         results[method][strn]["iou"] = m_iou
         results[method][strn]["dice"] = m_dice
