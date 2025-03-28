@@ -83,7 +83,7 @@ class Runner:
                     toc = time()
 
             # Compute validation loss
-            val_loss = self.validate_autoencoder()
+            val_loss = self.validate()
             val_loss = val_loss if val_loss is not None else 0.0
             epoch_loss /= len(self.train_loader)
 
@@ -124,7 +124,7 @@ class Runner:
                 if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
                     tic = time()
                     log.info(
-                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / batch_idx + 1):.4f}, Time: {(tic - toc):.2f}s")
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / (batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
                     toc = time()
 
             # Compute validation loss
@@ -143,7 +143,13 @@ class Runner:
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
 
     def validate(self):
-        """ Compute validation loss. """
+        if self.type == "seg":
+            return self.validate_segmentation()
+        else:
+            return self.validate_autoencoder()
+
+    def validate_segmentation(self):
+        """ Compute validation loss for segmentation. """
         self.model.eval()  # Set model to evaluation mode
         total_loss = 0
         num_batches = len(self.val_loader)
@@ -157,6 +163,26 @@ class Runner:
                 images, masks = images.to(self.device), masks.to(self.device)
                 outputs = self.model(images)
                 loss = self.criterion(outputs, masks)
+                total_loss += loss.item()
+
+        return total_loss / num_batches
+
+    def validate_autoencoder(self):
+        """Compute validation loss for autoencoder. """
+        self.model.eval()
+        total_loss = 0
+
+        num_batches = len(self.val_loader)
+
+        if num_batches == 0:
+            log.warning("Validation loader is empty. Skipping validation.")
+            return 0
+
+        with torch.no_grad():  # Disable gradient calculation
+            for images in self.val_loader:
+                images = images.to(self.device)
+                outputs = self.model(images)
+                loss = self.criterion(outputs, images)
                 total_loss += loss.item()
 
         return total_loss / num_batches
