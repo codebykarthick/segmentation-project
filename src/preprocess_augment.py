@@ -39,7 +39,7 @@ processed_test_img_path, processed_test_mask_path = get_image_mask_paths(
 Refer notebook experiment 1, that explores our dataset train and test images and masks.
 We found that 560x600 covers 99%ile of images. We will resize all images to this size.
 """
-image_size = (256, 256)
+image_size = (512, 512)
 
 log.info(f"Image size after processing (HxW): {image_size}")
 
