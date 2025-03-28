@@ -248,9 +248,9 @@ class Runner:
                 return
 
             self.model.encoder.load_state_dict(
-                torch.load(encoder_file, map_location=self.device))
+                torch.load(encoder_file, weights_only=True, map_location=self.device))
             self.model.decoder.load_state_dict(
-                torch.load(decoder_file, map_location=self.device))
+                torch.load(decoder_file, weights_only=True, map_location=self.device))
             self.model.eval()
             return
 
@@ -260,7 +260,7 @@ class Runner:
             return
 
         self.model.load_state_dict(torch.load(
-            os.path.join(CONSTANTS["WEIGHTS_PATH"], file_name), map_location=self.device))
+            os.path.join(CONSTANTS["WEIGHTS_PATH"], file_name), weights_only=True, map_location=self.device))
         self.model.eval()
 
 
@@ -272,6 +272,7 @@ if __name__ == "__main__":
     model_name = sys.argv[1].lower()
     mode = sys.argv[2].lower()
     model_type = "seg"
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if model_name == "unet":
         model = UNet(in_channels=3, out_channels=3)
@@ -283,10 +284,11 @@ if __name__ == "__main__":
         if selected_encoder:
             encoder = Autoencoder()
             encoder.load_state_dict(torch.load(
-                os.path.join(CONSTANTS["WEIGHTS_PATH"], "autoencoder", selected_encoder)))
+                os.path.join(CONSTANTS["WEIGHTS_PATH"],
+                             "autoencoder", selected_encoder),
+                weights_only=True, map_location=device))
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
     elif model_name == "clip_segmentation":
-        device = "cuda" if torch.cuda.is_available() else "cpu"
         model = ClipSegmentation(device=device)
     else:
         log.error(
