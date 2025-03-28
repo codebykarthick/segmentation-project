@@ -31,7 +31,8 @@ def create_model_and_segment(img_path, model_type, model_weight_path):
         model = ClipSegmentation()
 
     # Load the weights from the path provided
-    model.load_state_dict(torch.load(model_weight_path, map_location=device))
+    model.load_state_dict(torch.load(
+        model_weight_path, weights_only=True, map_location=device))
 
     # Run inference
     img = Image.open(img_path).convert("RGB")
