@@ -21,10 +21,17 @@ log = logger.setup_logger()
 class Runner:
     """ Runner class for training and testing UNet and other models. """
 
-    def __init__(
-            self, model_name, model,
-            model_type="seg"):
-        """ Initialize the Runner class, with GPU support if available. """
+    def __init__(self, model_name: str, model: torch.nn.Module, model_type: str = "seg") -> None:
+        """ Initialize the Runner class with GPU support if available.
+
+        Parameters:
+            model_name (str): The name of the model.
+            model (torch.nn.Module): The model instance to be trained or tested.
+            model_type (str): The type of model ('seg' for segmentation or other for autoencoder). Default is 'seg'.
+
+        Returns:
+            None
+        """
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
@@ -42,15 +49,29 @@ class Runner:
             self.train_loader, self.val_loader, self.test_loader = get_data_loaders()
             self.criterion = nn.MSELoss()
 
-    def train(self, epochs=10):
-        """ Train the model. """
+    def train(self, epochs: int = 10) -> None:
+        """ Train the model segmentation or autoencoder.
+
+        Parameters:
+            epochs (int): The number of epochs to train the model. Default is 10.
+
+        Returns:
+            None
+        """
         if self.type == "seg":
             self.train_seg(epochs)
         else:
             self.train_autoencoder(epochs)
 
-    def train_autoencoder(self, num_epochs=10):
-        """ Train the model. """
+    def train_autoencoder(self, num_epochs: int = 10) -> None:
+        """ Train the model and save the encoder and decoder weights for best epoch loops.
+
+        Parameters:
+            num_epochs (int): The number of epochs to train the autoencoder. Default is 10.
+
+        Returns:
+            None
+        """
         self.model.train()
         val_loss = None
         best_val_loss = float('inf')
@@ -94,8 +115,15 @@ class Runner:
                 self.save_model(
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
 
-    def train_seg(self, num_epochs=10):
-        """ Train the model. """
+    def train_seg(self, num_epochs: int = 10) -> None:
+        """ Train the model and save the weights for best epochs.
+
+        Parameters:
+            num_epochs (int): The number of epochs to train the segmentation model. Default is 10.
+
+        Returns:
+            None
+        """
         self.model.train()
         val_loss = None
         best_val_loss = float('inf')
@@ -142,14 +170,23 @@ class Runner:
                 self.save_model(
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
 
-    def validate(self):
+    def validate(self) -> float:
+        """ Validate the model against the validation set.
+
+        Returns:
+            float: The average validation loss.
+        """
         if self.type == "seg":
             return self.validate_segmentation()
         else:
             return self.validate_autoencoder()
 
-    def validate_segmentation(self):
-        """ Compute validation loss for segmentation. """
+    def validate_segmentation(self) -> float:
+        """ Compute validation loss for segmentation.
+
+        Returns:
+            float: The average segmentation loss.
+        """
         self.model.eval()  # Set model to evaluation mode
         total_loss = 0
         num_batches = len(self.val_loader)
@@ -167,8 +204,12 @@ class Runner:
 
         return total_loss / num_batches
 
-    def validate_autoencoder(self):
-        """Compute validation loss for autoencoder. """
+    def validate_autoencoder(self) -> float:
+        """ Compute validation loss for autoencoder.
+
+        Returns:
+            float: The average autoencoder loss.
+        """
         self.model.eval()
         total_loss = 0
 
@@ -187,14 +228,29 @@ class Runner:
 
         return total_loss / num_batches
 
-    def test(self, model_path):
+    def test(self, model_path: str) -> None:
+        """ Test the model.
+
+        Parameters:
+            model_path (str): The path to the model weights to be tested.
+
+        Returns:
+            None
+        """
         if self.type == 'seg':
-            self.test_seg(model_path)
+            self.test_segmentation(model_path)
         else:
             self.test_autoencoder(model_path)
 
-    def test_autoencoder(self, model_path):
-        """ Test the autoencoder model. """
+    def test_autoencoder(self, model_path: str) -> None:
+        """ Test the autoencoder model.
+
+        Parameters:
+            model_path (str): The path to the model weights to be tested.
+
+        Returns:
+            None
+        """
         if model_path is None:
             log.error("Model path not provided.")
             return
@@ -217,8 +273,15 @@ class Runner:
             total_loss /= len(self.test_loader)
         log.info(f"Avg Test Loss: {total_loss:.4f}")
 
-    def test_seg(self, model_path):
-        """ Test the segmentation model. """
+    def test_segmentation(self, model_path: str) -> None:
+        """ Test the segmentation model.
+
+        Parameters:
+            model_path (str): The path to the model weights to be tested.
+
+        Returns:
+            None
+        """
         if model_path is None:
             log.error("Model path not provided.")
             return
@@ -240,8 +303,15 @@ class Runner:
             total_loss /= len(self.test_loader)
         log.info(f"Avg Test Loss: {total_loss:.4f}")
 
-    def save_model(self, file_name="unet_checkpoint.pth"):
-        """ Save model weights. """
+    def save_model(self, file_name: str = "unet_checkpoint.pth") -> None:
+        """ Save model weights.
+
+        Parameters:
+            file_name (str): The name of the file to save the model weights. Default is "unet_checkpoint.pth".
+
+        Returns:
+            None
+        """
         if not os.path.exists(CONSTANTS["WEIGHTS_PATH"]):
             os.makedirs(CONSTANTS["WEIGHTS_PATH"])
 
@@ -259,8 +329,15 @@ class Runner:
             torch.save(self.model.state_dict(),
                        os.path.join(actual_path, file_name))
 
-    def load_model(self, file_name):
-        """ Load model weights. """
+    def load_model(self, file_name: str) -> None:
+        """ Load model weights.
+
+        Parameters:
+            file_name (str): The name of the file containing the model weights.
+
+        Returns:
+            None
+        """
 
         if self.model_name == "autoencoder_segmentation":
             # Load encoder weights separately
