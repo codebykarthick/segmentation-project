@@ -20,7 +20,7 @@ processed_train_path = os.path.join(processed_path, "TrainVal")
 processed_test_path = os.path.join(processed_path, "Test")
 
 
-def get_image_mask_paths(base):
+def get_image_mask_paths(base: str):
     """Helper function to get image and mask paths."""
     return os.path.join(base, "color"), os.path.join(base, "label")
 
@@ -45,8 +45,8 @@ log.info(f"Image size after processing (HxW): {image_size}")
 
 
 def process(
-        image_folder, mask_folder, output_img_folder, output_mask_folder,
-        augmentation_transforms, is_test=False):
+        image_folder: str, mask_folder: str, output_img_folder: str, output_mask_folder: str,
+        augmentation_transforms: str, is_test: bool = False):
     """Actually processes the images and masks. Resizes and augments if not test, 
     only resizes if test."""
     for i, file_name in enumerate(os.listdir(image_folder), 1):

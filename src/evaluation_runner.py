@@ -14,6 +14,7 @@ from util.data_loader import get_seg_data_loaders, get_data_loaders
 from util.model_handler import load_selected_model
 import json
 from tqdm import tqdm
+from typing import Callable, Optional, Dict, Any, List, Union
 
 log = logger.setup_logger()
 
@@ -24,7 +25,18 @@ class EvaluationRunner:
     several metrics and robustness measures.
     """
 
-    def __init__(self, model_name, model, model_path):
+    def __init__(self, model_name: str, model: torch.nn.Module, model_path: str) -> None:
+        """
+        Initialize the EvaluationRunner with the specified model and load its weights.
+
+        Parameters:
+            model_name (str): Name of the model.
+            model (torch.nn.Module): The model instance for evaluation.
+            model_path (str): Path to the saved model weights.
+
+        Returns:
+            None
+        """
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
         self.model = model.to(self.device)
@@ -35,12 +47,30 @@ class EvaluationRunner:
 
         cudnn.benchmark = True
 
-    def load_model(self, model_path):
+    def load_model(self, model_path: str) -> None:
+        """
+        Load model weights from the specified path.
+
+        Parameters:
+            model_path (str): Path to the model weights file.
+
+        Returns:
+            None
+        """
         log.info(f"Loading model weights from: {model_path}")
         self.model.load_state_dict(torch.load(
             model_path, weights_only=True, map_location=self.device))
 
-    def calculate_metrics(self, metrics=[]):
+    def calculate_metrics(self, metrics: List[str] = []) -> None:
+        """
+        Calculate evaluation metrics on the test set without any perturbations.
+
+        Parameters:
+            metrics (List[str]): List of metric identifiers to calculate. E.g., 'metrics_iou', 'metrics_dice', 'metrics_pixel-accuracy'.
+
+        Returns:
+            None
+        """
         results = {}
         results["metrics"] = {}
 
@@ -66,17 +96,17 @@ class EvaluationRunner:
 
         self.update_results_json(results)
 
-    def get_average_metric(self, metric_fn, transforms=None, is_occlusion=False):
+    def get_average_metric(self, metric_fn: Callable, transforms: Optional[Callable] = None, is_occlusion: bool = False) -> Dict[Any, float]:
         """
-        Computes the average value for a given metric function (IoU, Dice, or Pixel Accuracy).
+        Compute the average value for a given metric function (IoU, Dice, or Pixel Accuracy) over the test set.
 
         Args:
-            metric_fn (function): The metric function to apply.
-            transforms: Any transforms to apply
-            is_occlusion: Boolean to decide if occlusion needs to be applied or not.
+            metric_fn (Callable): The metric function to apply.
+            transforms (Optional[Callable]): Any transforms to apply to the images.
+            is_occlusion (bool): Whether to apply occlusion to the images.
 
         Returns:
-            dict: A dictionary containing the average metric score for each class.
+            Dict[Any, float]: A dictionary containing the average metric score for each class.
         """
         total_metric = {}  # Dictionary to store metric for each class
         num_samples = {}  # Dictionary to track number of samples per class
@@ -85,38 +115,34 @@ class EvaluationRunner:
             for images, masks in tqdm(self.test_loader, desc='Processing batches'):
                 images, masks = images.to(self.device), masks.to(self.device)
 
-                # If occlusion apply the method directly
+                # Apply occlusion or transforms if specified
                 if is_occlusion:
                     images, masks = apply_occlusion(images, masks)
                 elif transforms:
                     images = transforms(images)
 
                 preds = self.model(images)
-                # Convert logits to probabilities
                 preds = torch.softmax(preds, dim=1)
                 preds = torch.argmax(preds, dim=1)
 
-                # Iterate the batch for the individual scores
                 for i in range(masks.shape[0]):
                     metric_scores = metric_fn(preds[i], masks[i])
                     for cls, score in metric_scores.items():
-                        if cls in total_metric:
-                            total_metric[cls] += score
-                        else:
-                            total_metric[cls] = score
+                        total_metric[cls] = total_metric.get(cls, 0) + score
                     for cls in metric_scores.keys():
-                        if cls in num_samples:
-                            num_samples[cls] += 1
-                        else:
-                            num_samples[cls] = 1
+                        num_samples[cls] = num_samples.get(cls, 0) + 1
 
         return {cls: total_metric[cls] / num_samples[cls] for cls in total_metric if cls in num_samples} if num_samples else {}
 
-    def calculate_metrics_on_methods(self, methods=[]):
+    def calculate_metrics_on_methods(self, methods: List[str] = []) -> None:
         """
-        Iterates through the list of methods of perturbations to
-        apply and calculates performance of the model on iou and
-        dice metrics.
+        Evaluate the model performance on various perturbation methods by calculating metrics like IoU and Dice.
+
+        Parameters:
+            methods (List[str]): List of perturbation method identifiers (e.g., 'gaussian_noise', 'occlusion').
+
+        Returns:
+            None
         """
         results = {}
         results["methods"] = {}
@@ -161,7 +187,20 @@ class EvaluationRunner:
             log.info(f"{method} at {item} over, updating JSON.")
             self.update_results_json(results)
 
-    def test_perturbation(self, method, strn, results, transforms, is_occlusion=False):
+    def test_perturbation(self, method: str, strn: Union[str, int], results: dict, transforms: Optional[Callable] = None, is_occlusion: bool = False) -> None:
+        """
+        Test a perturbation method by applying it to the test set and computing metrics.
+
+        Parameters:
+            method (str): The perturbation method identifier.
+            strn (Union[str, int]): The current strength or level of perturbation.
+            results (dict): Dictionary to store the resulting metrics.
+            transforms (Optional[Callable]): Transform function to apply for the perturbation.
+            is_occlusion (bool): Whether to apply occlusion.
+
+        Returns:
+            None
+        """
         m_iou = self.get_average_metric(iou, transforms, is_occlusion)
         m_dice = self.get_average_metric(dice, transforms, is_occlusion)
         m_p_acc = self.get_average_metric(
@@ -171,31 +210,30 @@ class EvaluationRunner:
         results[method][strn]["dice"] = m_dice
         results[method][strn]["pixel-accuracy"] = m_p_acc
 
-    def update_results_json(self, current_dict):
+    def update_results_json(self, current_dict: dict) -> None:
         """
-        Updates the results JSON file with new key-value pairs.
+        Update the results JSON file with new key-value pairs.
 
-        Args:
+        Parameters:
             current_dict (dict): Dictionary containing new key-value pairs to be added.
+
+        Returns:
+            None
         """
-        # Check if results directory exists, if not create it
         if not os.path.exists("results"):
             os.makedirs("results")
-        # Check if file exists and load previous data
         results_path = os.path.join("results", self.results_file)
         if os.path.exists(results_path):
             with open(results_path, "r") as f:
                 try:
                     results_data = json.load(f)
                 except json.JSONDecodeError:
-                    results_data = {}  # If file is empty or corrupted, reset
+                    results_data = {}
         else:
             results_data = {}
 
-        # Update with new key-value pairs
         results_data.update(current_dict)
 
-        # Write back to the file
         with open(results_path, "w") as f:
             json.dump(results_data, f, indent=4)
 
@@ -203,8 +241,7 @@ class EvaluationRunner:
 
 
 if __name__ == "__main__":
-    allowed_models = ["unet",
-                      "autoencoder_segmentation", "clip"]
+    allowed_models = ["unet", "autoencoder_segmentation", "clip"]
     allowed_evals = ["metrics_iou", "metrics_dice", "metrics_pixel-accuracy", "contrast_inc", "contrast_dec", "occlusion",
                      "gaussian_noise", "s&p", "gaussian_blur", "brightness_inc", "brightness_dec"]
     parser = argparse.ArgumentParser(description="Evaluate model robustness")

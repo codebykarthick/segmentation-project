@@ -3,20 +3,23 @@ import numpy as np
 import torch
 import torchvision.transforms as transforms
 from skimage.util import random_noise
+from typing import Tuple
 
 
-def _add_gaussian_pixel_noise(image, std_dev=0, noise_type='gaussian', noise_ratio=0.00):
+def _add_gaussian_pixel_noise(image: torch.Tensor, std_dev: float = 0.0, noise_type: str = 'gaussian', noise_ratio: float = 0.00) -> torch.Tensor:
     """
-    Adds Gaussian or Salt & Pepper noise to a PyTorch image tensor.
+    Adds noise to a PyTorch image tensor.
+
+    Depending on the specified noise_type, either Gaussian noise or salt & pepper noise is applied.
 
     Args:
-        image (torch.Tensor): Image tensor (C, H, W) with values in [0,1] or [0,255].
-        std_dev (float): Standard deviation of Gaussian noise (only used if noise_type='gaussian').
-        noise_type (str): Type of noise to apply ('gaussian' or 's&p').
-        noise_ratio (float): Ratio of salt vs. pepper noise (only used if noise_type='s&p').
+        image (torch.Tensor): Image tensor with shape (C, H, W) and pixel values in [0, 1] or [0, 255].
+        std_dev (float, optional): Standard deviation for Gaussian noise. Defaults to 0.0.
+        noise_type (str, optional): Type of noise to apply ('gaussian' for Gaussian noise, 's&p' for salt & pepper noise). Defaults to 'gaussian'.
+        noise_ratio (float, optional): Ratio of salt vs. pepper noise (applicable only when noise_type is 's&p'). Defaults to 0.00.
 
     Returns:
-        torch.Tensor: Noisy image tensor in the same format.
+        torch.Tensor: The image tensor with added noise, in the same format as the input.
     """
     image_np = (image.permute(1, 2, 0).cpu().numpy()) * 255.0
 
@@ -33,48 +36,44 @@ def _add_gaussian_pixel_noise(image, std_dev=0, noise_type='gaussian', noise_rat
     return processed_tensor
 
 
-def gaussian_noise_transform(std_dev=0):
+def gaussian_noise_transform(std_dev: float = 0.0) -> transforms.Lambda:
     """
-    Returns a torchvision transform applying Gaussian noise.
+    Creates a transform that applies Gaussian noise to an image tensor.
 
     Args:
-        std_dev (float): Standard deviation of Gaussian noise.
-        noise_type (str): Type of noise to apply ('gaussian' or 's&p').
-        noise_ratio (float): Ratio of salt vs. pepper noise (used only if noise_type='s&p').
+        std_dev (float, optional): Standard deviation for the Gaussian noise. Defaults to 0.0.
 
     Returns:
-        torchvision.transforms.Lambda
+        torchvision.transforms.Lambda: A transform that applies Gaussian noise.
     """
     return transforms.Lambda(lambda img: _add_gaussian_pixel_noise(
         image=img, std_dev=std_dev, noise_type='gaussian'))
 
 
-def s_and_p_noise_transform(noise_ratio=0.00):
+def s_and_p_noise_transform(noise_ratio: float = 0.00) -> transforms.Lambda:
     """
-    Returns a torchvision transform applying Salt & Pepper noise.
+    Creates a transform that applies salt & pepper noise to an image tensor.
 
     Args:
-        std_dev (float): Standard deviation of Gaussian noise.
-        noise_type (str): Type of noise to apply ('gaussian' or 's&p').
-        noise_ratio (float): Ratio of salt vs. pepper noise (used only if noise_type='s&p').
+        noise_ratio (float, optional): Ratio of salt vs. pepper noise. Defaults to 0.00.
 
     Returns:
-        torchvision.transforms.Lambda
+        torchvision.transforms.Lambda: A transform that applies salt & pepper noise.
     """
     return transforms.Lambda(lambda img: _add_gaussian_pixel_noise(
         image=img, noise_type='s&p', noise_ratio=noise_ratio))
 
 
-def _apply_gaussian_blur(image, num_iterations=1):
+def _apply_gaussian_blur(image: torch.Tensor, num_iterations: int = 1) -> torch.Tensor:
     """
-    Applies Gaussian blur using a 3x3 kernel multiple times to a PyTorch tensor.
+    Applies Gaussian blur using a 3x3 kernel multiple times on an image tensor.
 
     Args:
-        image (torch.Tensor): Image tensor (C, H, W) in [0,1] or [0,255].
-        num_iterations (int): Number of times to apply Gaussian blur.
+        image (torch.Tensor): Image tensor with shape (C, H, W) with values in [0, 1] or [0, 255].
+        num_iterations (int, optional): Number of iterations to apply the blur. Defaults to 1.
 
     Returns:
-        torch.Tensor: Blurred image tensor in the same format.
+        torch.Tensor: The blurred image tensor in the same format as the input.
     """
     device = image.device  # Preserve original device
 
@@ -96,29 +95,29 @@ def _apply_gaussian_blur(image, num_iterations=1):
     return blurred_tensor
 
 
-def gaussian_blur_transform(num_iterations=1):
+def gaussian_blur_transform(num_iterations: int = 1) -> transforms.Lambda:
     """
-    Returns a torchvision transform applying Gaussian blur.
+    Creates a transform that applies Gaussian blur to an image tensor.
 
     Args:
-        num_iterations (int): Number of times to apply Gaussian blur.
+        num_iterations (int, optional): Number of times to apply the Gaussian blur. Defaults to 1.
 
     Returns:
-        torchvision.transforms.Lambda
+        torchvision.transforms.Lambda: A transform that applies Gaussian blur.
     """
     return transforms.Lambda(lambda img: _apply_gaussian_blur(img, num_iterations))
 
 
-def _modify_contrast(image, contrast_factor=1.0):
+def _modify_contrast(image: torch.Tensor, contrast_factor: float = 1.0) -> torch.Tensor:
     """
-    Modifies image contrast by multiplying each pixel value by contrast_factor.
+    Adjusts the contrast of an image tensor by scaling its pixel values.
 
     Args:
-        image (torch.Tensor): Image tensor (C, H, W) in [0,1] or [0,255].
-        contrast_factor (float): Factor to multiply pixel values by.
+        image (torch.Tensor): Image tensor with shape (C, H, W) with values in [0, 1] or [0, 255].
+        contrast_factor (float, optional): Factor by which to multiply the pixel values. Defaults to 1.0.
 
     Returns:
-        torch.Tensor: Contrast-adjusted image tensor in the same format.
+        torch.Tensor: The contrast-adjusted image tensor in the same format as the input.
     """
     device = image.device  # Preserve original device
 
@@ -135,29 +134,29 @@ def _modify_contrast(image, contrast_factor=1.0):
     return contrast_tensor
 
 
-def contrast_modify_transform(contrast_factor=1.0):
+def contrast_modify_transform(contrast_factor: float = 1.0) -> transforms.Lambda:
     """
-    Returns a torchvision transform applying contrast increase.
+    Creates a transform that adjusts the contrast of an image tensor.
 
     Args:
-        contrast_factor (float): Factor to multiply pixel values by.
+        contrast_factor (float, optional): Factor by which to adjust the contrast. Defaults to 1.0.
 
     Returns:
-        torchvision.transforms.Lambda
+        torchvision.transforms.Lambda: A transform that applies contrast modification.
     """
     return transforms.Lambda(lambda img: _modify_contrast(img, contrast_factor))
 
 
-def _modify_brightness(image, brightness_offset=0):
+def _modify_brightness(image: torch.Tensor, brightness_offset: float = 0) -> torch.Tensor:
     """
-    Modifies image brightness by adding a fixed value to each pixel.
+    Adjusts the brightness of an image tensor by adding a fixed offset to its pixel values.
 
     Args:
-        image (torch.Tensor): Image tensor (C, H, W) in [0,1] or [0,255].
-        brightness_offset (float): Value to add to each pixel.
+        image (torch.Tensor): Image tensor with shape (C, H, W) with values in [0, 1] or [0, 255].
+        brightness_offset (float, optional): Value to add to each pixel. Defaults to 0.
 
     Returns:
-        torch.Tensor: Brightness-adjusted image tensor in the same format.
+        torch.Tensor: The brightness-adjusted image tensor in the same format as the input.
     """
     device = image.device  # Preserve original device
 
@@ -174,31 +173,30 @@ def _modify_brightness(image, brightness_offset=0):
     return brightened_tensor
 
 
-def brightness_adjust_transform(brightness_offset=0):
+def brightness_adjust_transform(brightness_offset: float = 0) -> transforms.Lambda:
     """
-    Returns a torchvision transform applying brightness modification.
+    Creates a transform that adjusts the brightness of an image tensor.
 
     Args:
-        brightness_offset (float): Value to add to each pixel.
+        brightness_offset (float, optional): The offset to add to each pixel. Defaults to 0.
 
     Returns:
-        torchvision.transforms.Lambda
+        torchvision.transforms.Lambda: A transform that applies brightness adjustment.
     """
     return transforms.Lambda(lambda img: _modify_brightness(img, brightness_offset))
 
 
-def apply_occlusion(image_batch, mask_batch, occlusion_size=0):
+def apply_occlusion(image_batch: torch.Tensor, mask_batch: torch.Tensor, occlusion_size: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
     """
-    Applies a random square occlusion to both image and mask batches.
-    Works for batch processing.
+    Applies a random square occlusion to batches of images and masks.
 
     Args:
-        image_batch (torch.Tensor): Image tensor (N, C, H, W) in [0,1] range.
-        mask_batch (torch.Tensor): Mask tensor (N, H, W) in [0,1] or class indices.
-        occlusion_size (int): Edge length of the occlusion square.
+        image_batch (torch.Tensor): Batch of images with shape (N, C, H, W) in the [0, 1] range.
+        mask_batch (torch.Tensor): Batch of masks with shape (N, H, W) containing either normalized values or class indices.
+        occlusion_size (int, optional): Edge length of the square occlusion. Defaults to 0 (no occlusion).
 
     Returns:
-        Tuple[torch.Tensor, torch.Tensor]: Occluded images and masks.
+        Tuple[torch.Tensor, torch.Tensor]: The occluded image and mask batches.
     """
     if occlusion_size == 0:
         return image_batch, mask_batch  # No occlusion applied

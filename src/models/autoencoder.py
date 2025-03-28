@@ -5,7 +5,15 @@ import torch.nn as nn
 class Autoencoder(nn.Module):
     """ Autoencoder model for image compression and reconstruction """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Initialize the Autoencoder model.
+
+        This model compresses the input image and then reconstructs it using an encoder-decoder architecture.
+
+        Returns:
+            None
+        """
         super(Autoencoder, self).__init__()
 
         # Encoder
@@ -36,7 +44,16 @@ class Autoencoder(nn.Module):
             nn.Sigmoid()  # Normalize output to [0,1] range
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Perform the forward pass of the autoencoder.
+
+        Parameters:
+            x (torch.Tensor): Input tensor with shape (N, 3, H, W).
+
+        Returns:
+            torch.Tensor: Reconstructed output tensor with shape (N, 3, H, W).
+        """
         x = self.encoder(x)
         x = self.decoder(x)
         return x

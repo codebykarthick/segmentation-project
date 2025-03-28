@@ -1,16 +1,24 @@
 from collections import defaultdict
 import torch
+from typing import Dict
 
 # TODO: Review the metrics evaluation logic
 
 
-def iou(pred_mask, actual_mask, num_classes=3):
+def iou(pred_mask: torch.Tensor, actual_mask: torch.Tensor, num_classes: int = 3) -> Dict[int, float]:
     """
-    Compute class-specific IoU using PyTorch
-    :param pred_mask: Predicted mask of shape [H, W]
-    :param actual_mask: Ground-truth mask of shape [H, W]
-    :param num_classes: Number of segmentation classes (including background=0)
-    :return: Mean IoU across all classes that appear in the masks
+    Compute Intersection over Union (IoU) for each segmentation class.
+
+    This function calculates the IoU for each segmentation class present in the predicted and ground truth masks.
+    The IoU is computed as the ratio of the intersection area to the union area for each class.
+
+    Args:
+        pred_mask (torch.Tensor): The predicted segmentation mask with shape [H, W].
+        actual_mask (torch.Tensor): The ground truth segmentation mask with shape [H, W].
+        num_classes (int, optional): Total number of segmentation classes (including background). Defaults to 3.
+
+    Returns:
+        Dict[int, float]: A dictionary mapping each class index to its IoU score.
     """
     iou_scores = {}
 
@@ -32,14 +40,20 @@ def iou(pred_mask, actual_mask, num_classes=3):
     return iou_scores
 
 
-def dice(pred_mask, actual_mask, num_classes=3):
+def dice(pred_mask: torch.Tensor, actual_mask: torch.Tensor, num_classes: int = 3) -> Dict[int, float]:
     """
-    Compute class-specific Dice Coefficient using PyTorch.
+    Compute the Dice coefficient for each segmentation class.
 
-    :param pred_mask: Predicted mask tensor of shape [H, W] or [N, H, W] (batch support)
-    :param actual_mask: Ground truth mask tensor of shape [H, W] or [N, H, W] (batch support)
-    :param num_classes: Number of segmentation classes (excluding background)
-    :return: Mean Dice coefficient across classes (excluding background)
+    This function computes the Dice coefficient, a measure of overlap between the predicted and ground truth masks,
+    for each class (excluding background).
+
+    Args:
+        pred_mask (torch.Tensor): The predicted segmentation mask with shape [H, W] or [N, H, W].
+        actual_mask (torch.Tensor): The ground truth segmentation mask with shape [H, W] or [N, H, W].
+        num_classes (int, optional): Number of segmentation classes (excluding background). Defaults to 3.
+
+    Returns:
+        Dict[int, float]: A dictionary mapping each class index to its Dice coefficient.
     """
     dice_scores = {}
 
@@ -58,13 +72,20 @@ def dice(pred_mask, actual_mask, num_classes=3):
     return dice_scores
 
 
-def pixel_accuracy(pred_mask, actual_mask, num_classes=3):
+def pixel_accuracy(pred_mask: torch.Tensor, actual_mask: torch.Tensor, num_classes: int = 3) -> Dict[int, float]:
     """
-    Compute pixel-wise accuracy between predicted and ground truth masks.
+    Compute the pixel-wise accuracy for each segmentation class.
 
-    :param pred_mask: Predicted mask tensor of shape [N, H, W] (batch support)
-    :param actual_mask: Ground truth mask tensor of shape [N, H, W] (batch support)
-    :return: Mean pixel accuracy across the batch (0 to 1)
+    This function calculates the accuracy by comparing the predicted mask with the ground truth mask on a per-class basis.
+    For each class, it computes the ratio of correctly predicted pixels to the total number of pixels for that class.
+
+    Args:
+        pred_mask (torch.Tensor): The predicted segmentation mask with shape [N, H, W].
+        actual_mask (torch.Tensor): The ground truth segmentation mask with shape [N, H, W].
+        num_classes (int, optional): Total number of segmentation classes. Defaults to 3.
+
+    Returns:
+        Dict[int, float]: A dictionary mapping each class index to its pixel-wise accuracy.
     """
     accuracy_scores = {}
 

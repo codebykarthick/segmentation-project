@@ -1,12 +1,23 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import List, Tuple
 
 
 class UNetEncoder(nn.Module):
     """ UNet Encoder Model for image segmentation based on the original paper. """
 
-    def __init__(self, in_channels=3, base_channels=64):
+    def __init__(self, in_channels: int = 3, base_channels: int = 64) -> None:
+        """
+        Initializes the UNet Encoder.
+
+        Args:
+            in_channels (int): Number of channels in the input image. Defaults to 3.
+            base_channels (int): Number of filters for the first convolutional layer. Defaults to 64.
+
+        Returns:
+            None
+        """
         super(UNetEncoder, self).__init__()
 
         # Encoder Blocks with two convolution layers each
@@ -24,8 +35,17 @@ class UNetEncoder(nn.Module):
         # Max-pooling layers for downsampling
         self.pool = nn.MaxPool2d(2, stride=2)
 
-    def conv_block(self, in_channels, out_channels):
-        """ Basic convolutional block: Conv → ReLU → Conv → ReLU """
+    def conv_block(self, in_channels: int, out_channels: int) -> nn.Sequential:
+        """
+        Basic convolutional block: Conv → ReLU → Conv → ReLU.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+
+        Returns:
+            nn.Sequential: A sequential container of convolutional and ReLU layers.
+        """
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
@@ -33,8 +53,16 @@ class UNetEncoder(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-    def forward(self, x):
-        """ The forward pass of the encoder. """
+    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        """
+        Performs a forward pass of the encoder.
+
+        Args:
+            x (torch.Tensor): Input tensor with shape [batch_size, channels, height, width].
+
+        Returns:
+            tuple: A tuple containing the final encoded tensor and a list of skip connection tensors.
+        """
         skip_connections = []  # Save the skip connections for the decoder
 
         # First block
@@ -66,7 +94,17 @@ class UNetEncoder(nn.Module):
 class UNetDecoder(nn.Module):
     """ UNet Decoder Model for image segmentation based on the original paper. """
 
-    def __init__(self, out_channels=3, base_channels=64):
+    def __init__(self, out_channels: int = 3, base_channels: int = 64) -> None:
+        """
+        Initializes the UNet Decoder.
+
+        Args:
+            out_channels (int): Number of output channels for segmentation. Defaults to 3.
+            base_channels (int): Number of filters for the first decoder block. Defaults to 64.
+
+        Returns:
+            None
+        """
         super(UNetDecoder, self).__init__()
 
         # Upsampling and conv block 1
@@ -97,8 +135,17 @@ class UNetDecoder(nn.Module):
         self.segmentation = nn.Conv2d(
             base_channels, out_channels, kernel_size=1)
 
-    def conv_block(self, in_channels, out_channels):
-        """ Basic convolutional block: Conv → ReLU → Conv → ReLU """
+    def conv_block(self, in_channels: int, out_channels: int) -> nn.Sequential:
+        """
+        Basic convolutional block: Conv → ReLU → Conv → ReLU.
+
+        Args:
+            in_channels (int): Number of input channels.
+            out_channels (int): Number of output channels.
+
+        Returns:
+            nn.Sequential: A sequential container of convolutional and ReLU layers.
+        """
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
@@ -106,8 +153,18 @@ class UNetDecoder(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-    def forward(self, x, skip_connections, original_size):
-        """Decoder forward pass with skip connections."""
+    def forward(self, x: torch.Tensor, skip_connections: List[torch.Tensor], original_size: Tuple[int, int]) -> torch.Tensor:
+        """
+        Decoder forward pass with skip connections.
+
+        Args:
+            x (torch.Tensor): Encoded tensor from the encoder.
+            skip_connections (list of torch.Tensor): List of skip connection tensors from the encoder.
+            original_size (tuple of int): The original height and width of the input image.
+
+        Returns:
+            torch.Tensor: The segmentation output tensor.
+        """
         x = self.upconv1(x)
         x = torch.cat((x, skip_connections[3]), dim=1)
         x = self.dec1(x)
@@ -132,12 +189,32 @@ class UNetDecoder(nn.Module):
 class UNet(nn.Module):
     """Complete UNet Model combining encoder and decoder"""
 
-    def __init__(self, in_channels=3, out_channels=3, base_channels=64):
+    def __init__(self, in_channels: int = 3, out_channels: int = 3, base_channels: int = 64) -> None:
+        """
+        Initializes the UNet model.
+
+        Args:
+            in_channels (int): Number of channels in the input image. Defaults to 3.
+            out_channels (int): Number of channels in the output segmentation mask. Defaults to 3.
+            base_channels (int): Number of filters for the first convolutional layer. Defaults to 64.
+
+        Returns:
+            None
+        """
         super(UNet, self).__init__()
         self.encoder = UNetEncoder(in_channels, base_channels)
         self.decoder = UNetDecoder(out_channels, base_channels)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Performs a forward pass of the UNet model.
+
+        Args:
+            x (torch.Tensor): Input tensor with shape [batch_size, in_channels, height, width].
+
+        Returns:
+            torch.Tensor: Segmentation output tensor.
+        """
         original_h, original_w = x.shape[2], x.shape[3]
         x, skip_connections = self.encoder(x)
         x = self.decoder(x, skip_connections, (original_h, original_w))
