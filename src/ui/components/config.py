@@ -3,9 +3,15 @@ import json
 config = None
 
 
-def get_config(file="ui_config.json"):
+def get_config(file: str = "ui_config.json"):
     """
     Load a single config instance for UI consistency.
+
+    Args:
+        file: Name of the config file to load, default is ui_config.json
+
+    Returns:
+        The dictionary instance of the config file.
     """
     global config
     if config is None:

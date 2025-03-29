@@ -9,10 +9,18 @@ from util.constants import CONSTANTS
 imageToTensor = transforms.ToTensor()
 
 
-def create_model_and_segment(img_path, model_type, model_weight_path):
+def create_model_and_segment(img_path: str, model_type: str, model_weight_path: str):
     """
     Get the input image and run inference, generate mask. Save said mask as a temporary
     file.
+
+    Args:
+        img_path: Path to the image to infer
+        model_type: Type of the model instance to laod
+        model_weight_path: Path of the model weights to load into the model instance
+
+    Returns:
+        Returns the path of 
 
     Return path of the temporary file saved to be loaded for final preview.
     """
