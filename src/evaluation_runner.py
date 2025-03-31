@@ -10,7 +10,7 @@ import torch
 import torch.backends.cudnn as cudnn
 from util import logger
 from util.constants import CONSTANTS
-from util.data_loader import get_seg_data_loaders, get_data_loaders
+from util.data_loader import get_seg_data_loaders
 from util.model_handler import load_selected_model
 import json
 from tqdm import tqdm
@@ -40,6 +40,8 @@ class EvaluationRunner:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
         self.model = model.to(self.device)
+        self.load_model(model_path=model_path)
+        _, _, self.test_loader = get_seg_data_loaders()
 
         cudnn.benchmark = True
 
