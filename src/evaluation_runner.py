@@ -4,8 +4,8 @@ from datetime import datetime
 from evaluation.metrics import iou, dice, pixel_accuracy
 from evaluation.robustness import gaussian_noise_transform, gaussian_blur_transform, contrast_modify_transform, brightness_adjust_transform, apply_occlusion, s_and_p_noise_transform
 from models.unet import UNet
-from models.autoencoder import Autoencoder
 from models.autoencoder_segmentation import AutoEncoderSegmentation
+from models.clip_segmentation import ClipSegmentation
 import torch
 import torch.backends.cudnn as cudnn
 from util import logger
@@ -39,11 +39,7 @@ class EvaluationRunner:
         """
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
-        self.model = model.to(self.device)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        self.results_file = f"{self.model_name}_metrics_{timestamp}.json"
-        _, _, self.test_loader = get_seg_data_loaders()
-        self.load_model(model_path=model_path)
+        self.model = model.to(self.devil_path)
 
         cudnn.benchmark = True
 
@@ -267,6 +263,8 @@ if __name__ == "__main__":
         model = UNet()
     elif model_name == "autoencoder_segmentation":
         model = AutoEncoderSegmentation()
+    elif model_name == "clip":
+        model= ClipSegmentation()
 
     runner = EvaluationRunner(model_name=model_name,
                               model=model,

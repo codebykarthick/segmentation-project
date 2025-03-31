@@ -3,7 +3,6 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms
-from torchvision.transforms import InterpolationMode
 from PIL import Image
 
 
@@ -16,7 +15,7 @@ test_mask_path = os.path.join(test_path, "label")
 
 TRAIN_VAL_SPLIT = 0.8
 # Change this if you get OOM errors
-BATCH_SIZE = 16
+BATCH_SIZE = 8
 
 
 class ImageDataset(Dataset):

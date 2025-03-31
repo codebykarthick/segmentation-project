@@ -29,8 +29,7 @@ def iou(pred_mask: torch.Tensor, actual_mask: torch.Tensor, num_classes: int = 3
         intersection = torch.sum(pred_class & actual_class, dim=(-2, -1))
         union = torch.sum(pred_class | actual_class, dim=(-2, -1))
 
-        # If the union is zero, it means neither prediction nor ground truth
-        # had any pixels for this class, so skip it.
+        # Skip classes that actual class does not even have label for
         non_empty_mask = (actual_class != 0)
         if non_empty_mask.any():
             # Compute IoU only for images (or pixels) where this class actually appears
