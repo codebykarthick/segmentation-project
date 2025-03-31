@@ -37,6 +37,8 @@ class Runner:
         self.model = model.to(self.device)
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=CONSTANTS["LEARNING_RATE"])
+        self.patience = 3
+        self.counter = 0
         cudnn.benchmark = True
 
         self.type = model_type
@@ -109,11 +111,18 @@ class Runner:
             epoch_loss /= len(self.train_loader)
 
             if val_loss < best_val_loss:
+                self.counter = 0
                 best_val_loss = val_loss
                 # Save model whenever it is better than our current best
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 self.save_model(
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
+            else:
+                self.counter += 1
+                if self.counter > self.patience:
+                    log.info(
+                        f"Early stopping. Best val loss: {best_val_loss:.4f}.")
+                    break
 
     def train_seg(self, num_epochs: int = 10) -> None:
         """ Train the model and save the weights for best epochs.
@@ -164,11 +173,18 @@ class Runner:
                 f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
             if val_loss < best_val_loss:
+                self.counter = 0
                 best_val_loss = val_loss
                 # Save model whenever it is better than our current best
                 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 self.save_model(
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
+            else:
+                self.counter += 1
+                if self.counter > self.patience:
+                    log.info(
+                        f"Early stopping. Best val loss: {best_val_loss:.4f}.")
+                    break
 
     def validate(self) -> float:
         """ Validate the model against the validation set.
