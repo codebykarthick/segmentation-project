@@ -39,7 +39,7 @@ class EvaluationRunner:
         """
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
-        self.model = model.to(self.devil_path)
+        self.model = model.to(self.device)
 
         cudnn.benchmark = True
 
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     elif model_name == "autoencoder_segmentation":
         model = AutoEncoderSegmentation()
     elif model_name == "clip":
-        model= ClipSegmentation()
+        model = ClipSegmentation()
 
     runner = EvaluationRunner(model_name=model_name,
                               model=model,
