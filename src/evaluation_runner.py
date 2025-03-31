@@ -42,6 +42,8 @@ class EvaluationRunner:
         self.model = model.to(self.device)
         self.load_model(model_path=model_path)
         _, _, self.test_loader = get_seg_data_loaders()
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.results_file = f"results_{timestamp}.json"
 
         cudnn.benchmark = True
 
@@ -142,6 +144,8 @@ class EvaluationRunner:
         Returns:
             None
         """
+        if len(methods) == 0:
+            return
         results = {}
         results["methods"] = {}
         log.info("Evaluating performance on perturbations.")

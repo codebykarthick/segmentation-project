@@ -38,7 +38,6 @@ def setup_data(processed=True):
 
     # Create the folder back fresh
     os.mkdir(path)
-    print("Downloading dataset")
     # Download the zip file
     gdown.download(file_url, file_path, quiet=False, fuzzy=True)
 
