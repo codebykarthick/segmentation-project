@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import torch
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset, random_split, WeightedRandomSampler
 from torchvision import transforms
 from PIL import Image
 
@@ -59,10 +59,10 @@ class SegmentationDataset(Dataset):
         image = Image.open(img_path).convert("RGB")
         # Color of Mask classifies if its cat or dog
         mask = Image.open(mask_path).convert("RGB")
-        
+
         if self.transforms:
             image = self.transforms(image)
-            
+
         mask = self.convert_mask(mask)
         mask = torch.from_numpy(mask).long()
 
@@ -89,6 +89,15 @@ class SegmentationDataset(Dataset):
 
         return label_mask
 
+    def get_class_label(self, mask_path):
+        mask = Image.open(mask_path).convert("RGB")
+        label_mask = self.convert_mask(mask)
+        if 1 in label_mask:
+            return 1  # Cat
+        elif 2 in label_mask:
+            return 2  # Dog
+        return 0  # Background or neither
+
 
 transform = transforms.Compose([
     transforms.ToTensor()
@@ -104,8 +113,23 @@ def get_seg_data_loaders():
     test_dataset = SegmentationDataset(
         test_image_path, test_mask_path, transform)
 
+    # Compute image-level labels
+    image_labels = []
+    for idx in train_dataset.indices:
+        fname = dataset.images[idx]
+        mask_path = os.path.join(
+            train_mask_path, fname.replace(".jpg", ".png"))
+        label = dataset.get_class_label(mask_path)
+        image_labels.append(label)
+
+    # Compute class weights
+    class_counts = np.bincount(image_labels)
+    weights = [1.0 / class_counts[label] for label in image_labels]
+    sampler = WeightedRandomSampler(
+        weights, num_samples=len(weights), replacement=True)
+
     train_loader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+        train_dataset, batch_size=BATCH_SIZE, sampler=sampler)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
     test_loader = DataLoader(
         test_dataset, batch_size=BATCH_SIZE, shuffle=False)
