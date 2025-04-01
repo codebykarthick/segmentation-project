@@ -119,7 +119,7 @@ class Runner:
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
             else:
                 self.counter += 1
-                if self.counter > self.patience:
+                if self.counter >= self.patience:
                     log.info(
                         f"Early stopping. Best val loss: {best_val_loss:.4f}.")
                     break
@@ -181,7 +181,7 @@ class Runner:
                     f"{self.model_name}_{timestamp}_val_{val_loss:.4f}.pth")
             else:
                 self.counter += 1
-                if self.counter > self.patience:
+                if self.counter >= self.patience:
                     log.info(
                         f"Early stopping. Best val loss: {best_val_loss:.4f}.")
                     break
