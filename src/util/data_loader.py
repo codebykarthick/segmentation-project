@@ -113,23 +113,8 @@ def get_seg_data_loaders():
     test_dataset = SegmentationDataset(
         test_image_path, test_mask_path, transform)
 
-    # Compute image-level labels
-    image_labels = []
-    for idx in train_dataset.indices:
-        fname = dataset.images[idx]
-        mask_path = os.path.join(
-            train_mask_path, fname.replace(".jpg", ".png"))
-        label = dataset.get_class_label(mask_path)
-        image_labels.append(label)
-
-    # Compute class weights
-    class_counts = np.bincount(image_labels)
-    weights = [1.0 / class_counts[label] for label in image_labels]
-    sampler = WeightedRandomSampler(
-        weights, num_samples=len(weights), replacement=True)
-
     train_loader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, sampler=sampler)
+        train_dataset, batch_size=BATCH_SIZE)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
     test_loader = DataLoader(
         test_dataset, batch_size=BATCH_SIZE, shuffle=False)
