@@ -5,12 +5,14 @@ from models.autoencoder_segmentation import AutoEncoderSegmentation
 from models.clip_segmentation import ClipSegmentation
 from models.unet import UNet
 import sys
+import argparse
 import torch
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from time import time
 from util.constants import CONSTANTS
+from util.cloud_tools import auto_shutdown
 from util.data_loader import get_seg_data_loaders, get_data_loaders
 from util.model_handler import load_selected_model
 from util import logger
@@ -102,13 +104,16 @@ class Runner:
                 if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
                     tic = time()
                     log.info(
-                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
                     toc = time()
 
             # Compute validation loss
             val_loss = self.validate()
             val_loss = val_loss if val_loss is not None else 0.0
             epoch_loss /= len(self.train_loader)
+
+            log.info(
+                f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
             if val_loss < best_val_loss:
                 self.counter = 0
@@ -161,7 +166,7 @@ class Runner:
                 if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
                     tic = time()
                     log.info(
-                        f"Epoch: [{epoch+1}/{num_epochs}], Batch [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / (batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / (batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
                     toc = time()
 
             # Compute validation loss
@@ -384,12 +389,30 @@ class Runner:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        log.error("Usage: python runner.py <model_name> <mode>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Run model training or testing.")
+    parser.add_argument("--model_name", type=str,
+                        help="Name of the model to use.")
+    parser.add_argument("--mode", type=str, choices=[
+                        "train", "test"], help="Operation mode: train or test.")
+    parser.add_argument("--epochs", type=int, default=10,
+                        help="Number of epochs for training (only used in train mode).")
+    parser.add_argument("--batch_size", type=int, default=8,
+                        help="Size of batch to be used for training, validation and testing")
+    parser.add_argument("--env", type=str, choices=["local", "cloud"], default="local",
+                        help="Cloud mode has a special shutdown sequence to save resources.")
+    parser.add_argument("--copy_dir", type=str,
+                        help="Directory where logs and weights folder will be copied (required if env is cloud)")
+    args = parser.parse_args()
+    if args.env == "cloud":
+        if not args.copy_dir:
+            parser.error("--copy_dir is required when env is cloud")
+        elif not os.path.exists(args.copy_dir):
+            log.error("The copy directory does not exist, halting execution.")
+            sys.exit(1)
 
-    model_name = sys.argv[1].lower()
-    mode = sys.argv[2].lower()
+    model_name = args.model_name.lower()
+    mode = args.mode.lower()
     model_type = "seg"
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -405,7 +428,8 @@ if __name__ == "__main__":
             encoder.load_state_dict(torch.load(
                 os.path.join(CONSTANTS["WEIGHTS_PATH"],
                              "autoencoder", selected_encoder),
-                weights_only=True, map_location=device))
+                weights_only=True, map_location=device
+            ))
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
     elif model_name == "clip_segmentation":
         model = ClipSegmentation(device=device)
@@ -418,14 +442,16 @@ if __name__ == "__main__":
     runner = Runner(model_name=model_name, model=model, model_type=model_type)
 
     if mode == "train":
-        epochs = int(sys.argv[3])
-        log.info("Training and validating model")
-        runner.train(epochs=epochs)
+        log.info(f"Training and validating {model_name} model")
+        runner.train(epochs=args.epochs)
     elif mode == "test":
-        log.info("Evaluating trained model on test set")
+        log.info(f"Evaluating trained {model_name} model on test set")
         selected_model = load_selected_model(sub_dir=model_name)
         if selected_model:
             runner.test(selected_model)
     else:
         log.error("Invalid mode provided. Use 'train' or 'test'.")
         sys.exit(1)
+
+    if args.env == "cloud":
+        auto_shutdown(args.copy_dir)

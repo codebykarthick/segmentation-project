@@ -14,8 +14,6 @@ test_image_path = os.path.join(test_path, "color")
 test_mask_path = os.path.join(test_path, "label")
 
 TRAIN_VAL_SPLIT = 0.8
-# Change this if you get OOM errors
-BATCH_SIZE = 8
 
 
 class ImageDataset(Dataset):
@@ -104,7 +102,14 @@ transform = transforms.Compose([
 ])
 
 
-def get_seg_data_loaders():
+def get_seg_data_loaders(batch_size: int = 8):
+    """
+    Function that creates the data loaders for the segmentation task.
+    Args:
+        batch_size (default 8): Size of each batch
+    Returns:
+        The training, validation and the test set loader.
+    """
     dataset = SegmentationDataset(train_image_path, train_mask_path, transform)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))
     val_size = len(dataset) - train_size
@@ -114,15 +119,22 @@ def get_seg_data_loaders():
         test_image_path, test_mask_path, transform)
 
     train_loader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        train_dataset, batch_size=batch_size)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(
-        test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader
 
 
-def get_data_loaders():
+def get_data_loaders(batch_size: int = 8):
+    """
+    Function that creates the data loaders for the segmentation task.
+    Args:
+        batch_size (default 8): Size of each batch
+    Returns:
+        The training, validation and the test set loader.
+    """
     dataset = ImageDataset(train_image_path, transform)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))
     val_size = len(dataset) - train_size
@@ -131,9 +143,9 @@ def get_data_loaders():
     test_dataset = ImageDataset(test_image_path, transform)
 
     train_loader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(
-        test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, val_loader, test_loader
