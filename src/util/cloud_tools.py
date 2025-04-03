@@ -50,14 +50,16 @@ def auto_shutdown(copy_dir: str = "/mnt/ai"):
     new_folder = os.path.join(copy_dir, "cv_coursework", f"run_{timestamp}")
     os.makedirs(new_folder, exist_ok=True)
 
+    log.info(f"Saving backup to {new_folder}")
+
     # List of directories to copy (assumed to be in the current working directory)
     src_dirs = ["weights", "logs"]
     for src_dir in src_dirs:
         if os.path.exists(src_dir):
             dest_dir = os.path.join(new_folder, src_dir)
             shutil.copytree(src_dir, dest_dir)
-            log.info(f"Copied {src_dir} to {dest_dir}")
+            print(f"Copied {src_dir} to {dest_dir}")
         else:
-            log.warning(f"Source directory {src_dir} does not exist")
+            print(f"Source directory {src_dir} does not exist")
 
     get_pod_and_terminate()
