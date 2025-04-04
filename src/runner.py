@@ -23,14 +23,15 @@ log = logger.setup_logger()
 class Runner:
     """ Runner class for training and testing UNet and other models. """
 
-    def __init__(self, model_name: str, model: torch.nn.Module, model_type: str = "seg", batch_size: int = 8) -> None:
+    def __init__(self, model_name: str, model: torch.nn.Module, model_type: str = "seg", batch_size: int = 8, learning_rate: float = 1e-3) -> None:
         """ Initialize the Runner class with GPU support if available.
 
         Parameters:
             model_name (str): The name of the model.
             model (torch.nn.Module): The model instance to be trained or tested.
             model_type (str): The type of model ('seg' for segmentation or other for autoencoder). Default is 'seg'.
-
+            batch_size (int): The size of the batch used for training
+            learning_rate (float): The learning rate to be used.
         Returns:
             None
         """
@@ -38,10 +39,11 @@ class Runner:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
         self.optimizer = optim.Adam(
-            self.model.parameters(), lr=CONSTANTS["LEARNING_RATE"])
+            self.model.parameters(), lr=self.learning_rate)
         self.patience = 3
         self.counter = 0
         self.batch_size = batch_size
+        self.learning_rate = learning_rate
         cudnn.benchmark = True
 
         self.type = model_type
@@ -408,6 +410,8 @@ if __name__ == "__main__":
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
     parser.add_argument("--file_path", type=str,
                         help="Relative file path from weights folder in order to load model directly. Else interactive menu is triggered.")
+    parser.add_argument("--learning_rate", type=float, default=1e-3,
+                        help="Learning rate to be used for training.")
 
     args = parser.parse_args()
     if args.env == "cloud":
@@ -425,6 +429,7 @@ if __name__ == "__main__":
     batch_size = args.batch_size
     device = "cuda" if torch.cuda.is_available() else "cpu"
     file_path = args.file_path
+    learning_rate = args.learning_rate
 
     if model_name == "unet":
         model = UNet(in_channels=3, out_channels=3)
@@ -456,7 +461,7 @@ if __name__ == "__main__":
 
     # Initialize Runner with the model chosen
     runner = Runner(model_name=model_name, model=model,
-                    model_type=model_type, batch_size=batch_size)
+                    model_type=model_type, batch_size=batch_size, learning_rate=learning_rate)
 
     if mode == "train":
         log.info(f"Training and validating {model_name} model")
