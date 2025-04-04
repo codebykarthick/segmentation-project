@@ -6,6 +6,15 @@ import os
 log = setup_logger()
 
 
+def expand_file_path(file_path: str = ""):
+    log.info(f"Provided path: {file_path}")
+    actual_path = os.path.join(
+        os.getcwd(), CONSTANTS["WEIGHTS_PATH"], file_path)
+    log.info(f"Loading file from: {actual_path}")
+
+    return actual_path
+
+
 def list_model_weights(extension=".pth", sub_dir="", filters=[]):
     """ List all available model weights in the given directory. """
     actual_path = os.path.join(CONSTANTS["WEIGHTS_PATH"], sub_dir)

@@ -14,7 +14,7 @@ from time import time
 from util.constants import CONSTANTS
 from util.cloud_tools import auto_shutdown
 from util.data_loader import get_seg_data_loaders, get_data_loaders
-from util.model_handler import load_selected_model
+from util.model_handler import load_selected_model, expand_file_path
 from util import logger
 
 log = logger.setup_logger()
@@ -406,8 +406,13 @@ if __name__ == "__main__":
                         help="Cloud mode has a special shutdown sequence to save resources.")
     parser.add_argument("--copy_dir", type=str,
                         help="Directory where logs and weights folder will be copied (required if env is cloud)")
+    parser.add_argument("--file_path", type=str,
+                        help="Relative file path from weights folder in order to load model directly. Else interactive menu is triggered.")
+
     args = parser.parse_args()
     if args.env == "cloud":
+        if not args.file_path:
+            parser.error("--file_path is required when env is cloud")
         if not args.copy_dir:
             parser.error("--copy_dir is required when env is cloud")
         elif not os.path.exists(args.copy_dir):
@@ -419,6 +424,7 @@ if __name__ == "__main__":
     model_type = "seg"
     batch_size = args.batch_size
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    file_path = args.file_path
 
     if model_name == "unet":
         model = UNet(in_channels=3, out_channels=3)
@@ -426,8 +432,11 @@ if __name__ == "__main__":
         model = Autoencoder()
         model_type = "auto"
     elif model_name == "autoencoder_segmentation":
-        selected_encoder = load_selected_model(
-            sub_dir="autoencoder", filters=["encoder"])
+        if file_path is not None:
+            selected_encoder = expand_file_path(file_path)
+        else:
+            selected_encoder = load_selected_model(
+                sub_dir="autoencoder", filters=["encoder"])
         if selected_encoder:
             autoencoder = Autoencoder()
             # Get the encoder half alone for the segmentation task
@@ -454,6 +463,8 @@ if __name__ == "__main__":
         runner.train(epochs=args.epochs)
     elif mode == "test":
         log.info(f"Evaluating trained {model_name} model on test set")
+        if file_path is not None:
+            selected_model = expand_file_path(file_path)
         selected_model = load_selected_model(sub_dir=model_name)
         if selected_model:
             runner.test(selected_model)
