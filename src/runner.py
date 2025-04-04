@@ -81,7 +81,7 @@ class Runner:
         best_val_loss = float('inf')
         for epoch in range(num_epochs):
             epoch_loss = 0
-            scaler = torch.cuda.amp.GradScaler()
+            scaler = torch.amp.GradScaler()
             toc = time()
 
             for batch_idx, images in enumerate(self.train_loader):
@@ -90,7 +90,7 @@ class Runner:
 
                 self.optimizer.zero_grad()
 
-                with torch.cuda.amp.autocast(self.device, dtype=torch.float16):
+                with torch.amp.autocast(self.device, dtype=torch.float16):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, images)
 
@@ -143,7 +143,7 @@ class Runner:
         best_val_loss = float('inf')
         for epoch in range(num_epochs):
             epoch_loss = 0
-            scaler = torch.cuda.amp.GradScaler()
+            scaler = torch.amp.GradScaler()
 
             toc = time()
             for batch_idx, (images, masks) in enumerate(self.train_loader):
@@ -152,7 +152,7 @@ class Runner:
 
                 self.optimizer.zero_grad()
 
-                with torch.cuda.amp.autocast(self.device, dtype=torch.float16):
+                with torch.amp.autocast(self.device, dtype=torch.float16):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, masks)
 
