@@ -13,7 +13,7 @@ def get_pod_and_terminate():
     """
     Sends a GET request to get the pod id and then terminates it to shutdown.
     """
-    run_pod_token = os.getenv("RP_SECRET")
+    run_pod_token = os.getenv("API_KEY")
     response = requests.get("https://rest.runpod.io/v1/pods",
                             headers={
                                 "Authorization": f"Bearer {run_pod_token}"
