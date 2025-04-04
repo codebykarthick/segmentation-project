@@ -23,7 +23,7 @@ log = logger.setup_logger()
 class Runner:
     """ Runner class for training and testing UNet and other models. """
 
-    def __init__(self, model_name: str, model: torch.nn.Module, model_type: str = "seg") -> None:
+    def __init__(self, model_name: str, model: torch.nn.Module, model_type: str = "seg", batch_size: int = 8) -> None:
         """ Initialize the Runner class with GPU support if available.
 
         Parameters:
@@ -41,16 +41,19 @@ class Runner:
             self.model.parameters(), lr=CONSTANTS["LEARNING_RATE"])
         self.patience = 3
         self.counter = 0
+        self.batch_size = batch_size
         cudnn.benchmark = True
 
         self.type = model_type
         if self.type == "seg":
             log.info("Running a segmentation training.")
-            self.train_loader, self.val_loader, self.test_loader = get_seg_data_loaders()
+            self.train_loader, self.val_loader, self.test_loader = get_seg_data_loaders(
+                batch_size)
             self.criterion = nn.CrossEntropyLoss()
         else:
             log.info("Running an autoencoder training.")
-            self.train_loader, self.val_loader, self.test_loader = get_data_loaders()
+            self.train_loader, self.val_loader, self.test_loader = get_data_loaders(
+                batch_size)
             self.criterion = nn.MSELoss()
 
     def train(self, epochs: int = 10) -> None:
@@ -414,6 +417,7 @@ if __name__ == "__main__":
     model_name = args.model_name.lower()
     mode = args.mode.lower()
     model_type = "seg"
+    batch_size = args.batch_size
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if model_name == "unet":
@@ -442,7 +446,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Initialize Runner with the model chosen
-    runner = Runner(model_name=model_name, model=model, model_type=model_type)
+    runner = Runner(model_name=model_name, model=model,
+                    model_type=model_type, batch_size=batch_size)
 
     if mode == "train":
         log.info(f"Training and validating {model_name} model")
