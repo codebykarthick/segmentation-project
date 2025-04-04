@@ -340,7 +340,7 @@ class Runner:
         if not os.path.exists(actual_path):
             os.makedirs(actual_path)
 
-        if self.model_name == "autoencoder_segmentation":
+        if self.model_name == "autoencoder":
             # Save encoder weights separately
             torch.save(self.model.encoder.state_dict(),
                        os.path.join(actual_path, "encoder_" + file_name))
