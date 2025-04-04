@@ -57,6 +57,7 @@ class Runner:
             self.train_loader, self.val_loader, self.test_loader = get_data_loaders(
                 batch_size)
             self.criterion = nn.MSELoss()
+        log.info(f"Using a learning rate of: {self.learning_rate}")
 
     def train(self, epochs: int = 10) -> None:
         """ Train the model segmentation or autoencoder.
