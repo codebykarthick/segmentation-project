@@ -360,7 +360,7 @@ class Runner:
             None
         """
 
-        if self.model_name == "autoencoder_segmentation":
+        if self.model_name == "autoencoder":
             # Load encoder weights separately
             encoder_file = os.path.join(
                 CONSTANTS["WEIGHTS_PATH"], self.model_name, "encoder_" + file_name)
@@ -422,9 +422,12 @@ if __name__ == "__main__":
         model = Autoencoder()
         model_type = "auto"
     elif model_name == "autoencoder_segmentation":
-        selected_encoder = load_selected_model(sub_dir="autoencoder")
+        selected_encoder = load_selected_model(
+            sub_dir="autoencoder", filters=["encoder"])
         if selected_encoder:
-            encoder = Autoencoder()
+            autoencoder = Autoencoder()
+            # Get the encoder half alone for the segmentation task
+            encoder = autoencoder.encoder
             encoder.load_state_dict(torch.load(
                 os.path.join(CONSTANTS["WEIGHTS_PATH"],
                              "autoencoder", selected_encoder),

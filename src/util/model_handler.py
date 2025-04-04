@@ -6,15 +6,17 @@ import os
 log = setup_logger()
 
 
-def list_model_weights(extension=".pth", sub_dir=""):
+def list_model_weights(extension=".pth", sub_dir="", filters=[]):
     """ List all available model weights in the given directory. """
     actual_path = os.path.join(CONSTANTS["WEIGHTS_PATH"], sub_dir)
     if not os.path.exists(actual_path):
         log.error("No weights directory found.")
         return []
 
-    # Hacky way to remove encoder_ and decoder_ prefixes for autoencoder_segmentation
-    return [f.replace("encoder_", "").replace("decoder_", "") for f in sorted(os.listdir(actual_path)) if f.endswith(extension)]
+    return [
+        f for f in sorted(os.listdir(actual_path))
+        if f.endswith(extension) and (not filters or any(substr in f for substr in filters))
+    ]
 
 
 def select_model_weight(stdscr, weights):
@@ -46,9 +48,9 @@ def select_model_weight(stdscr, weights):
             return weights[idx]
 
 
-def load_selected_model(sub_dir=""):
+def load_selected_model(sub_dir: str = "", filters: list = []):
     """ Display model weights and let user select one. """
-    weights = list_model_weights(sub_dir=sub_dir)
+    weights = list_model_weights(sub_dir=sub_dir, filters=filters)
 
     if not weights:
         log.error("No model weights found!")
