@@ -41,16 +41,6 @@ class Runner:
         self.learning_rate = learning_rate
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=self.learning_rate)
-        self.scheduler = torch.optim.lr_scheduler.SequentialLR(
-            self.optimizer,
-            schedulers=[
-                torch.optim.lr_scheduler.LinearLR(
-                    self.optimizer, start_factor=0.1, total_iters=5),
-                torch.optim.lr_scheduler.CosineAnnealingLR(
-                    self.optimizer, T_max=25)
-            ],
-            milestones=[5]
-        )
         self.patience = 3
         self.counter = 0
         self.batch_size = batch_size
@@ -123,9 +113,6 @@ class Runner:
                         f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
                     toc = time()
 
-            # Schedule the LR
-            self.scheduler.step()
-
             # Compute validation loss
             val_loss = self.validate()
             val_loss = val_loss if val_loss is not None else 0.0
@@ -187,8 +174,6 @@ class Runner:
                     log.info(
                         f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / (batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
                     toc = time()
-
-            self.scheduler.step()
 
             # Compute validation loss
             val_loss = self.validate()
