@@ -63,3 +63,8 @@ def auto_shutdown(copy_dir: str = "/mnt/ai"):
             print(f"Source directory {src_dir} does not exist")
 
     get_pod_and_terminate()
+
+
+if __name__ == "__main__":
+    # For testing it out in cloud
+    auto_shutdown()
