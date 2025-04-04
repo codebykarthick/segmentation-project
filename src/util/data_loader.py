@@ -4,6 +4,9 @@ import torch
 from torch.utils.data import DataLoader, Dataset, random_split, WeightedRandomSampler
 from torchvision import transforms
 from PIL import Image
+from util.logger import setup_logger
+
+log = setup_logger()
 
 
 train_path = os.path.join(os.getcwd(), "data", "processed", "TrainVal")
@@ -110,6 +113,8 @@ def get_seg_data_loaders(batch_size: int = 8):
     Returns:
         The training, validation and the test set loader.
     """
+    log.info(
+        f"Creating segmenatation loaders with a batch size of: {batch_size}")
     dataset = SegmentationDataset(train_image_path, train_mask_path, transform)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))
     val_size = len(dataset) - train_size
@@ -135,6 +140,8 @@ def get_data_loaders(batch_size: int = 8):
     Returns:
         The training, validation and the test set loader.
     """
+    log.info(
+        f"Creating autoencoder loaders with a batch size of: {batch_size}")
     dataset = ImageDataset(train_image_path, transform)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))
     val_size = len(dataset) - train_size
