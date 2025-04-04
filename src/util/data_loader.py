@@ -122,12 +122,15 @@ def get_seg_data_loaders(batch_size: int = 8):
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     test_dataset = SegmentationDataset(
         test_image_path, test_mask_path, transform)
+    num_workers = min(4, os.cpu_count() // 2)
 
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        train_dataset, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size,
+                            shuffle=False, num_workers=num_workers, pin_memory=True)
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False)
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
 
     return train_loader, val_loader, test_loader
 
@@ -148,11 +151,14 @@ def get_data_loaders(batch_size: int = 8):
 
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     test_dataset = ImageDataset(test_image_path, transform)
+    num_workers = min(4, os.cpu_count() // 2)
 
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        train_dataset, batch_size=batch_size, shuffle=True,
+        num_workers=num_workers, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size,
+                            shuffle=False, num_workers=num_workers, pin_memory=True)
     test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False)
+        test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
 
     return train_loader, val_loader, test_loader
