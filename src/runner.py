@@ -117,11 +117,13 @@ class Runner:
 
                 epoch_loss += loss.item()
 
-            if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
-                tic = time()
-                log.info(
-                    f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
-                toc = time()
+                if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
+                    tic = time()
+                    log.info(
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss/(batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
+                    toc = time()
+
+            # Schedule the LR
             self.scheduler.step()
 
             # Compute validation loss
@@ -180,11 +182,12 @@ class Runner:
 
                 epoch_loss += loss.item()
 
-            if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
-                tic = time()
-                log.info(
-                    f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / (batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
-                toc = time()
+                if (batch_idx + 1) % CONSTANTS["BATCH_LOG_FREQ"] == 0:
+                    tic = time()
+                    log.info(
+                        f"Epoch: [{epoch+1}/{num_epochs}], Batch: [{batch_idx+1}/{len(self.train_loader)}], Loss: {(epoch_loss / (batch_idx + 1)):.4f}, Time: {(tic - toc):.2f}s")
+                    toc = time()
+
             self.scheduler.step()
 
             # Compute validation loss
