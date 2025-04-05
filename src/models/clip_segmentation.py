@@ -1,117 +1,95 @@
 import torch
 import torch.nn as nn
-import clip
 import torch.nn.functional as F
+import clip
 
 
 class ClipSegmentation(nn.Module):
     """
-    Use a pretrained CLIP model as the image encoder, and add a segmentation
-    head on top of the final embeddings.
-
-    Attributes:
-        clip_model: The pretrained CLIP model used for image encoding.
-        embed_to_features: A sequential module transforming the CLIP embedding.
-        post_clip_conv: A sequential module acting as a segmentation decoder.
-        initial_h (int): Initial height of the spatial grid.
-        initial_w (int): Initial width of the spatial grid.
+    A segmentation network that:
+      1) Uses CLIP (ViT-B/32) as a frozen image encoder to get a 16×16 spatial feature map.
+      2) Learns a decoder to upsample from 16×16 to 512×512 and predict a multi-class mask.
     """
 
-    def __init__(self, clip_model_name: str = "ViT-B/32", num_classes: int = 3, device: str = "cpu") -> None:
-        """
-        Initializes the ClipSegmentation model.
+    def __init__(self, device="cpu", num_classes=3, clip_model_name="ViT-B/32"):
+        super().__init__()
 
-        Args:
-            clip_model_name (str): The name of the CLIP model to load. Defaults to "ViT-B/32".
-            num_classes (int): Number of segmentation classes. Defaults to 3.
-            device (str): Device on which to load the model (e.g., "cpu", "cuda"). Defaults to "cpu".
-
-        Returns:
-            None
-        """
-        super(ClipSegmentation, self).__init__()
-
-        # 1) Load CLIP
+        # Load CLIP and freeze its parameters
         self.clip_model, _ = clip.load(clip_model_name, device=device)
-        # Freeze all CLIP parameters
         for param in self.clip_model.parameters():
             param.requires_grad = False
 
-        # 2) CLIP’s visual encoder outputs an embedding of shape [batch_size, channel_dim].
-        #    For ViT-B/32, channel_dim is 512. We'll treat these as "global" embeddings.
-        #    For segmentation, we typically want a spatial map, but for a simple baseline,
-        #    we can either:
-        #       (A) reshape tokens from earlier layers, or
-        #       (B) upsample from the global embedding.
-        #    Here, we do a naive approach that broadcasts the global embedding into a
-        #    low-res HxW, then upsamples.
-
-        embed_dim = self.clip_model.visual.output_dim  # e.g. 512 for ViT-B/32
-
-        # 3) Optional: simple 1-layer to transform the 512-dim embedding
-        self.embed_to_features = nn.Sequential(
-            nn.Linear(embed_dim, 512),   # map 512 -> 512
+        # Example decoder: 5 "blocks" of transpose-convolution to go from 16×16 → 512×512
+        # Each block roughly doubles the spatial dimension. Adjust channel sizes as needed.
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(768, 512, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(512),
             nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+
+            # Finally, predict the segmentation mask with num_classes channels
+            nn.Conv2d(32, num_classes, kernel_size=1)
         )
 
-        # 4) A naive approach: expand that 512-dimensional embedding to a small 2D grid
-        #    (say 8x8), then do conv-transpose or a typical "decoder" to get back to original image size.
-        #    This is just a demonstration. Feel free to adapt for your own resolution.
-
-        # Let’s fix a small 8x8 spatial shape:
-        self.initial_h = 8
-        self.initial_w = 8
-
-        # You could store a "template" that we fill with repeated embeddings
-        # shape => [batch_size, 512, 8, 8]
-        self.post_clip_conv = nn.Sequential(
-            nn.ConvTranspose2d(512, 256, 3, stride=2,
-                               padding=1, output_padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(256, 128, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(128, 64, 3, stride=2,
-                               padding=1, output_padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(64, num_classes, kernel_size=3, padding=1)
-        )
-        # The output has shape [batch_size, num_classes, <final_H>, <final_W>].
-        # If your training images are bigger than that final size, you can do another
-        # upsampling or more transposed convolution layers.
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         """
-        Performs a forward pass of the segmentation model.
-
-        Args:
-            x (torch.Tensor): Input images with shape [batch_size, 3, H, W].
-
-        Returns:
-            torch.Tensor: Segmentation logits with shape [batch_size, num_classes, H', W'].
+        Expects x in shape (B, 3, H, W) with H=W=512.
+        Returns segmentation logits of shape (B, num_classes, 512, 512).
         """
-        # 1) Preprocess images to the size CLIP expects (224x224 if using ViT-B/32)
-        #    or rely on transforms. For a quick hack:
-        #    If x is not 224x224, we can do something like:
-        original_h, original_w = x.shape[2], x.shape[3]  # e.g. 560, 600
-        x_small = F.interpolate(
-            x, size=(224, 224), mode='bilinear', align_corners=False)
 
-        # 2) Extract CLIP embeddings
+        # Make sure input is 512×512 for the CLIP ViT-B/32:
+        # CLIP’s ViT-B/32 uses a 32×32 patch size, so 512×512 → 16×16 patches + 1 CLS token.
+        # If your images are not already 512×512, resize them here:
+        if x.shape[-1] != 512:
+            x = F.interpolate(x, size=(512, 512),
+                              mode='bilinear', align_corners=False)
+
+        # Move to same device/dtype as CLIP
+        device = next(self.clip_model.parameters()).device
+        x = x.to(device=device, dtype=self.clip_model.dtype)
+
+        # -- 1) Pass through CLIP’s visual stem manually to get the final patch embeddings --
+        # clip_model.visual includes the patch-embedding conv, transformer, etc.
+        # By default, clip_model.encode_image(...) returns a pooled feature, but for segmentation
+        # we want the spatial feature map from the transformer.
         with torch.no_grad():
-            # shape: [batch_size, 512] for ViT-B/32
-            clip_emb = self.clip_model.encode_image(x_small)
+            # Step 1: patch + positional embedding
+            # (B, 3, 512, 512) -> (B, 768, 16, 16) after conv1
+            x = self.clip_model.visual.conv1(x)  # shape: [B, 768, 16, 16]
+            # shape: [B, 16*16, 768] = [B, 256, 768]
+            x = x.flatten(2).transpose(1, 2)
+            x = self.clip_model.visual.ln_pre(x)  # layernorm
 
-        # 3) Map the 512 embeddings -> a new 512 dimension (optional)
-        #    shape => [batch_size, 512]
-        feat = self.embed_to_features(clip_emb)
+            # Step 2: Transformer
+            # shape: [B, 257, 768] (includes class token)
+            x = self.clip_model.visual.transformer(x)
+            x = self.clip_model.visual.ln_post(x)
 
-        # 4) Expand that [batch_size, 512] to [batch_size, 512, 1, 1]
-        feat = feat.unsqueeze(-1).unsqueeze(-1)
+            # Step 3: If a class token is present (i.e. output has 257 tokens), drop it. Otherwise, keep all tokens.
+            if x.shape[1] == 257:
+                x = x[:, 1:, :]
 
-        # 5) Then tile or otherwise expand up to [batch_size, 512, 8, 8]
-        feat = feat.expand(-1, 512, self.initial_h, self.initial_w)
+        # Reshape to 2D feature map: (B, 768, 16, 16)
+        B, N, C = x.shape  # N = 16*16 = 256
+        h = w = int(N**0.5)  # 16
+        x = x.transpose(1, 2).view(B, C, h, w)
 
-        # 6) Pass through the segmentation decoder
-        out = self.post_clip_conv(feat)
+        # -- 2) Decode the 16×16 features up to 512×512 --
+        x = self.decoder(x)  # shape: (B, num_classes, 512, 512)
 
-        return out
+        return x
