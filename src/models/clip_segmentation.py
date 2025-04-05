@@ -89,6 +89,7 @@ class ClipSegmentation(nn.Module):
         B, N, C = x.shape  # N = 16*16 = 256
         h = w = int(N**0.5)  # 16
         x = x.transpose(1, 2).view(B, C, h, w)
+        x = x.to(torch.float32)
 
         # -- 2) Decode the 16×16 features up to 512×512 --
         x = self.decoder(x)  # shape: (B, num_classes, 512, 512)
