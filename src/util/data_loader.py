@@ -69,8 +69,7 @@ class SegmentationDataset(Dataset):
         mask = torch.from_numpy(mask).long()
 
         if self.prompt_mode:
-            valid_points = torch.nonzero(
-                (mask == 1) | (mask == 2), as_tuple=False)
+            valid_points = torch.nonzero(mask >= 0, as_tuple=False)
             if len(valid_points) > 0:
                 sampled_idx = torch.randint(
                     0, len(valid_points), (min(5, len(valid_points)),))
