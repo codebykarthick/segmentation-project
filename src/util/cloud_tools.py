@@ -13,18 +13,12 @@ def get_pod_and_terminate():
     """
     Sends a GET request to get the pod id and then terminates it to shutdown.
     """
-    run_pod_token = os.getenv("API_KEY")
-    response = requests.get("https://rest.runpod.io/v1/pods",
-                            headers={
-                                "Authorization": f"Bearer {run_pod_token}"
-                            }
-                            ).json()
-    print("Received pod list response:")
-    print(json.dumps(response, indent=2))
-    # Response is a json array, ideally should have only one pod info
-    pod = response[0]
-    podId = pod["id"]
-    response = requests.delete(f"https://rest.runpod.io/v1/pods/{podId}",
+    # Get the secret and the pod id to terminate.
+    run_pod_token = os.getenv("RUNPOD_SECRET_API_KEY")
+    pod_id = os.getenv("RUNPOD_POD_ID")
+
+    # Terminate it.
+    response = requests.delete(f"https://rest.runpod.io/v1/pods/{pod_id}",
                                headers={
         "Authorization": f"Bearer {run_pod_token}"
     }
