@@ -42,7 +42,7 @@ class Runner:
         self.optimizer = optim.Adam(filter(
             lambda p: p.requires_grad, self.model.parameters()), lr=self.learning_rate)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode='min', patience=2, factor=0.5, verbose=True
+            self.optimizer, mode='min', patience=2, factor=0.5
         )
         self.patience = 3
         self.counter = 0
