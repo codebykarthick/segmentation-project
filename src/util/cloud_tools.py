@@ -14,7 +14,7 @@ def get_pod_and_terminate():
     Sends a GET request to get the pod id and then terminates it to shutdown.
     """
     # Get the secret and the pod id to terminate.
-    run_pod_token = os.getenv("RUNPOD_SECRET_API_KEY")
+    run_pod_token = os.getenv("API_KEY")
     pod_id = os.getenv("RUNPOD_POD_ID")
 
     # Terminate it.
