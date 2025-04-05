@@ -416,8 +416,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.env == "cloud":
-        if not args.file_path:
-            parser.error("--file_path is required when env is cloud")
         if not args.copy_dir:
             parser.error("--copy_dir is required when env is cloud")
         elif not os.path.exists(args.copy_dir):

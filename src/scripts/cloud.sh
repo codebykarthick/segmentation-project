@@ -8,3 +8,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 # Go up two levels to install the other requirements
 cd ../..
 pip install -r requirements.txt
+
+# Download the processed dataset
+cd src/
+python data_setup.py processed
