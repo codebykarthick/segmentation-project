@@ -130,23 +130,26 @@ transform = transforms.Compose([
 ])
 
 
-def get_seg_data_loaders(batch_size: int = 8):
+def get_seg_data_loaders(batch_size: int = 8, prompt_mode: bool = False):
     """
     Function that creates the data loaders for the segmentation task.
     Args:
         batch_size (default 8): Size of each batch
+        prompt_mode (default False): If set to true, prompt is automatically sampled randomly
+        to simulate user prompted points.
     Returns:
         The training, validation and the test set loader.
     """
     log.info(
         f"Creating segmenatation loaders with a batch size of: {batch_size}")
-    dataset = SegmentationDataset(train_image_path, train_mask_path, transform)
+    dataset = SegmentationDataset(
+        train_image_path, train_mask_path, transform, prompt_mode=prompt_mode)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))
     val_size = len(dataset) - train_size
 
     train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
     test_dataset = SegmentationDataset(
-        test_image_path, test_mask_path, transform)
+        test_image_path, test_mask_path, transform, prompt_mode=prompt_mode)
     num_workers = min(4, os.cpu_count() // 2)
 
     train_loader = DataLoader(

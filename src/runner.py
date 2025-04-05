@@ -3,6 +3,7 @@ import os
 from models.autoencoder import Autoencoder
 from models.autoencoder_segmentation import AutoEncoderSegmentation
 from models.clip_segmentation import ClipSegmentation
+from models.prompt_segmentation import PromptSegmentation
 from models.unet import UNet
 import sys
 import argparse
@@ -49,11 +50,17 @@ class Runner:
         self.batch_size = batch_size
         cudnn.benchmark = True
 
+        if "prompt" in self.model_name:
+            self.prompt = True
+        else:
+            self.prompt = False
+
         self.type = model_type
+
         if self.type == "seg":
             log.info("Running a segmentation training.")
             self.train_loader, self.val_loader, self.test_loader = get_seg_data_loaders(
-                batch_size)
+                batch_size, prompt_mode=self.prompt)
             self.criterion = nn.CrossEntropyLoss()
         else:
             log.info("Running an autoencoder training.")
@@ -457,6 +464,8 @@ if __name__ == "__main__":
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
     elif model_name == "clip_segmentation":
         model = ClipSegmentation(device=device)
+    elif model_name == "prompt_segmentation":
+        model = PromptSegmentation()
     else:
         log.error(
             "Invalid model name. Supported: unet, autoencoder, autoencoder_segmentation")
