@@ -71,8 +71,10 @@ class SegmentationDataset(Dataset):
         if self.prompt_mode:
             valid_points = torch.nonzero(mask >= 0, as_tuple=False)
             if len(valid_points) > 0:
-                sampled_idx = torch.randint(
-                    0, len(valid_points), (min(5, len(valid_points)),))
+                # Sample 40% of valid points to simulate a user prompt.
+                num_samples = int(0.4 * len(valid_points))
+                # Shuffle so that the prompt changes everytime.
+                sampled_idx = torch.randperm(len(valid_points))[:num_samples]
                 sampled_points = valid_points[sampled_idx]
             else:
                 sampled_points = torch.empty((0, 2), dtype=torch.long)
