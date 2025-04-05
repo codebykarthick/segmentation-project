@@ -46,8 +46,6 @@ class ClipSegmentation(nn.Module):
             # Finally, predict the segmentation mask with num_classes channels
             nn.Conv2d(32, num_classes, kernel_size=1)
         )
-        # Decoder should be on the same float precision.
-        self.decoder = self.decoder.to(dtype=self.clip_model.dtype)
 
     def forward(self, x):
         """

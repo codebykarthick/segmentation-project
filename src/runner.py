@@ -39,8 +39,8 @@ class Runner:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = model.to(self.device)
         self.learning_rate = learning_rate
-        self.optimizer = optim.Adam(
-            self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.Adam(filter(
+            lambda p: p.requires_grad, self.model.parameters()), lr=self.learning_rate)
         self.patience = 3
         self.counter = 0
         self.batch_size = batch_size
