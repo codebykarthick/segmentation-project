@@ -20,6 +20,10 @@ class ClipSegmentation(nn.Module):
         for param in self.clip_model.parameters():
             param.requires_grad = False
 
+        for name, param in self.clip_model.visual.named_parameters():
+            if "resblocks.10" in name or "resblocks.11" in name:
+                param.requires_grad = True
+
         # Example decoder: 5 "blocks" of transpose-convolution to go from 16×16 → 512×512
         # Each block roughly doubles the spatial dimension. Adjust channel sizes as needed.
         self.decoder = nn.Sequential(

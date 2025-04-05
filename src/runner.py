@@ -41,6 +41,9 @@ class Runner:
         self.learning_rate = learning_rate
         self.optimizer = optim.Adam(filter(
             lambda p: p.requires_grad, self.model.parameters()), lr=self.learning_rate)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer, mode='min', patience=2, factor=0.5, verbose=True
+        )
         self.patience = 3
         self.counter = 0
         self.batch_size = batch_size
@@ -179,6 +182,7 @@ class Runner:
             val_loss = self.validate()
             val_loss = val_loss if val_loss is not None else 0.0
             epoch_loss /= len(self.train_loader)
+            self.scheduler.step(val_loss)
 
             log.info(
                 f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
