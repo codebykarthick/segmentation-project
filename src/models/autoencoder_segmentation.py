@@ -22,6 +22,9 @@ class AutoEncoderSegmentation(nn.Module):
         # Use the pretrained encoder for feature extraction.
         self.encoder = pretrained_encoder
 
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+
         # Define the segmentation decoder.
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(512, 256, kernel_size=3,
