@@ -12,6 +12,7 @@ class ClipSegmentation(nn.Module):
     """
 
     def __init__(self, device="cpu", num_classes=3, clip_model_name="ViT-B/32"):
+        print(f"Using device: {device}")
         super().__init__()
 
         # Load CLIP and freeze its parameters
