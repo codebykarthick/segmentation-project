@@ -40,13 +40,14 @@ class ImageDataset(Dataset):
 
 
 class SegmentationDataset(Dataset):
-    def __init__(self, image_dir, mask_dir, defined_transforms=None):
+    def __init__(self, image_dir, mask_dir, defined_transforms=None, prompt_mode=False):
         super().__init__()
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.images = sorted(os.listdir(image_dir))
         self.masks = sorted(os.listdir(mask_dir))
         self.transforms = defined_transforms
+        self.prompt_mode = prompt_mode
 
     def __len__(self):
         return len(self.images)
@@ -66,6 +67,30 @@ class SegmentationDataset(Dataset):
 
         mask = self.convert_mask(mask)
         mask = torch.from_numpy(mask).long()
+
+        if self.prompt_mode:
+            valid_points = torch.nonzero(
+                (mask == 1) | (mask == 2), as_tuple=False)
+            if len(valid_points) > 0:
+                sampled_idx = torch.randint(
+                    0, len(valid_points), (min(5, len(valid_points)),))
+                sampled_points = valid_points[sampled_idx]
+            else:
+                sampled_points = torch.empty((0, 2), dtype=torch.long)
+
+            # Create binary prompt mask
+            prompt_mask = torch.zeros(
+                (1, mask.shape[0], mask.shape[1]), dtype=torch.float32)
+            for y, x in sampled_points:
+                prompt_mask[0, y, x] = 1.0
+
+            # Create filtered ground truth mask
+            filtered_mask = torch.zeros_like(mask)
+            for y, x in sampled_points:
+                filtered_mask[y, x] = mask[y, x]
+
+            image = torch.cat([image, prompt_mask], dim=0)
+            mask = filtered_mask
 
         return image, mask
 
