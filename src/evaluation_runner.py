@@ -106,13 +106,13 @@ class EvaluationRunner:
 
         self.update_results_json(results)
 
-    def get_average_metric(self, metric_fn: Callable, transforms: Optional[Callable] = None, is_occlusion: bool = False) -> Dict[Any, float]:
+    def get_average_metric(self, metric_fn: Callable, transforms=None, is_occlusion: bool = False) -> Dict[Any, float]:
         """
         Compute the average value for a given metric function (IoU, Dice, or Pixel Accuracy) over the test set.
 
         Args:
             metric_fn (Callable): The metric function to apply.
-            transforms (Optional[Callable]): Any transforms to apply to the images.
+            transforms: Any transforms to apply to the images.
             is_occlusion (bool): Whether to apply occlusion to the images.
 
         Returns:
@@ -194,12 +194,12 @@ class EvaluationRunner:
                 log.info(f"Current strength: {item}")
                 results[method][item] = {}
                 self.test_perturbation(
-                    method, item, results, tfrm, is_occlusion)
+                    method, item, results, tfrm(item), is_occlusion)
 
             log.info(f"{method} at {item} over, updating JSON.")
             self.update_results_json(results)
 
-    def test_perturbation(self, method: str, strn: Union[str, int], results: dict, transforms: Optional[Callable] = None, is_occlusion: bool = False) -> None:
+    def test_perturbation(self, method: str, strn: Union[str, int], results: dict, transforms=None, is_occlusion: bool = False) -> None:
         """
         Test a perturbation method by applying it to the test set and computing metrics.
 
