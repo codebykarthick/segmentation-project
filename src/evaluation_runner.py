@@ -7,6 +7,7 @@ from models.unet import UNet
 from models.autoencoder import Autoencoder
 from models.autoencoder_segmentation import AutoEncoderSegmentation
 from models.clip_segmentation import ClipSegmentation
+from models.prompt_segmentation import PromptSegmentation
 import torch
 import torch.backends.cudnn as cudnn
 from util import logger
@@ -288,8 +289,10 @@ if __name__ == "__main__":
                 weights_only=True, map_location=device
             ))
             model = AutoEncoderSegmentation(pretrained_encoder=encoder)
-    elif model_name == "clip":
+    elif model_name == "clip_segmentation":
         model = ClipSegmentation()
+    elif model_name == "prompt_segmentation":
+        model = PromptSegmentation()
 
     runner = EvaluationRunner(model_name=model_name,
                               model=model,
