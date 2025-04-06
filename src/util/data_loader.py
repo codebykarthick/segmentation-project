@@ -69,18 +69,29 @@ class SegmentationDataset(Dataset):
         mask = torch.from_numpy(mask).long()
 
         if self.prompt_mode:
-            valid_points = torch.nonzero(mask >= 0, as_tuple=False)
-            if len(valid_points) > 0:
-                # Sample 40% of valid points to simulate a user prompt.
-                num_samples = int(0.4 * len(valid_points))
-                # Shuffle so that the prompt changes everytime.
-                sampled_idx = torch.multinomial(torch.ones(
-                    len(valid_points)), num_samples, replacement=False)
-                sampled_points = valid_points[sampled_idx]
+            foreground_points = torch.nonzero(
+                (mask == 1) | (mask == 2), as_tuple=False)
+            background_points = torch.nonzero(mask == 0, as_tuple=False)
+
+            sampled_points = []
+
+            if len(foreground_points) > 0:
+                num_fg_samples = int(0.3 * len(foreground_points))
+                fg_idx = torch.randperm(len(foreground_points))[
+                    :num_fg_samples]
+                sampled_points.append(foreground_points[fg_idx])
+
+            if len(background_points) > 0:
+                num_bg_samples = int(0.1 * len(background_points))
+                bg_idx = torch.randperm(len(background_points))[
+                    :num_bg_samples]
+                sampled_points.append(background_points[bg_idx])
+
+            if sampled_points:
+                sampled_points = torch.cat(sampled_points, dim=0)
             else:
                 sampled_points = torch.empty((0, 2), dtype=torch.long)
 
-            # Create binary prompt mask
             prompt_mask = torch.zeros(
                 (1, mask.shape[0], mask.shape[1]), dtype=torch.float32)
             filtered_mask = torch.zeros_like(mask)
