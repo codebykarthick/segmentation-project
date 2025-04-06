@@ -44,7 +44,14 @@ class EvaluationRunner:
         self.model_name = model_name
         self.model = model.to(self.device)
         self.load_model(model_path=model_path)
-        _, _, self.test_loader = get_seg_data_loaders(batch_size=batch_size)
+
+        if "prompt" in self.model_name:
+            self.prompt = True
+        else:
+            self.prompt = False
+
+        _, _, self.test_loader = get_seg_data_loaders(
+            batch_size=batch_size, prompt_mode=self.prompt)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.results_file = f"results_{timestamp}.json"
 
