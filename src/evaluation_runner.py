@@ -25,7 +25,7 @@ class EvaluationRunner:
     several metrics and robustness measures.
     """
 
-    def __init__(self, model_name: str, model: torch.nn.Module, model_path: str) -> None:
+    def __init__(self, model_name: str, model: torch.nn.Module, model_path: str, batch_size: int = 8) -> None:
         """
         Initialize the EvaluationRunner with the specified model and load its weights.
 
@@ -33,6 +33,7 @@ class EvaluationRunner:
             model_name (str): Name of the model.
             model (torch.nn.Module): The model instance for evaluation.
             model_path (str): Path to the saved model weights.
+            batch_size (int): Size of the batch for testing.
 
         Returns:
             None
@@ -41,7 +42,7 @@ class EvaluationRunner:
         self.model_name = model_name
         self.model = model.to(self.device)
         self.load_model(model_path=model_path)
-        _, _, self.test_loader = get_seg_data_loaders()
+        _, _, self.test_loader = get_seg_data_loaders(batch_size=batch_size)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.results_file = f"results_{timestamp}.json"
 
@@ -239,7 +240,8 @@ class EvaluationRunner:
         with open(results_path, "w") as f:
             json.dump(results_data, f, indent=4)
 
-        log.info(f"Results JSON updated: {results_path}")
+        log.info(f"Current results: {json.dumps(results_data, indent=4)}")
+        log.info(f"Results saved at: {results_path}")
 
 
 if __name__ == "__main__":
@@ -251,6 +253,8 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str,
                         help=f"Name of the model. Allowed options: {', '.join(allowed_models)}",
                         default="unet", choices=allowed_models)
+    parser.add_argument("--batch_size", type=int,
+                        help="Size of the batch to be used for the dataloader for metrics.")
     parser.add_argument("--eval_methods", nargs="+",
                         help=f"List of eval methods. Allowed options: {', '.join(allowed_evals)}")
 
