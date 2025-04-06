@@ -129,7 +129,7 @@ class Runner:
             epoch_loss /= len(self.train_loader)
 
             log.info(
-                f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
+                f"Epoch: [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
             if val_loss < best_val_loss:
                 self.counter = 0
@@ -192,7 +192,7 @@ class Runner:
             self.scheduler.step(val_loss)
 
             log.info(
-                f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
+                f"Epoch: [{epoch+1}/{num_epochs}], Loss: {epoch_loss:.4f}, Validation Loss: {val_loss:.4f}")
 
             if val_loss < best_val_loss:
                 self.counter = 0
