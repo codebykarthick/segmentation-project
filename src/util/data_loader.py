@@ -74,7 +74,8 @@ class SegmentationDataset(Dataset):
                 # Sample 40% of valid points to simulate a user prompt.
                 num_samples = int(0.4 * len(valid_points))
                 # Shuffle so that the prompt changes everytime.
-                sampled_idx = torch.randperm(len(valid_points))[:num_samples]
+                sampled_idx = torch.multinomial(torch.ones(
+                    len(valid_points)), num_samples, replacement=False)
                 sampled_points = valid_points[sampled_idx]
             else:
                 sampled_points = torch.empty((0, 2), dtype=torch.long)
@@ -82,13 +83,12 @@ class SegmentationDataset(Dataset):
             # Create binary prompt mask
             prompt_mask = torch.zeros(
                 (1, mask.shape[0], mask.shape[1]), dtype=torch.float32)
-            for y, x in sampled_points:
-                prompt_mask[0, y, x] = 1.0
-
-            # Create filtered ground truth mask
             filtered_mask = torch.zeros_like(mask)
-            for y, x in sampled_points:
-                filtered_mask[y, x] = mask[y, x]
+
+            if len(sampled_points) > 0:
+                ys, xs = sampled_points[:, 0], sampled_points[:, 1]
+                prompt_mask[0, ys, xs] = 1.0
+                filtered_mask[ys, xs] = mask[ys, xs]
 
             image = torch.cat([image, prompt_mask], dim=0)
             mask = filtered_mask
