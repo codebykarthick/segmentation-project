@@ -1,8 +1,8 @@
 import gdown
 import os
 import shutil
-import sys
 import zipfile
+import argparse
 
 DATASET_FILE_URL = "https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_00fyC/view?usp=share_link"
 # Original resize 3000x1800 something bad
@@ -11,13 +11,16 @@ DATASET_FILE_URL = "https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_
 # PROCESSED_URL = "https://drive.google.com/file/d/1UAQ8E-YOENu8K-kEkFkEl774hgH8-RiH/view?usp=sharing"
 # 512x512 Resize
 PROCESSED_URL = "https://drive.google.com/file/d/1sVNF0qNFwxaCtkeaICmzhs6PfiaKrGTZ/view?usp=share_link"
+WEIGHTS_URL = ""
 data_path = os.path.join(os.getcwd(), "data")
 processed_data_path = os.path.join(os.getcwd(), "data")
 original_file_path = os.path.join(data_path, "cv_dataset.zip")
 processed_file_path = os.path.join(processed_data_path, "processed.zip")
+weights_path = os.path.join(os.getcwd(), "weights")
+weights_file_path = os.path.join(weights_path, "weights.zip")
 
 
-def setup_data(processed=True):
+def setup_data(processed: bool = True):
     """ Download the original or the processed dataset """
     # Check if data folder exists, if yes clean it up.
 
@@ -51,12 +54,38 @@ def setup_data(processed=True):
     os.remove(file_path)
 
 
+def setup_weights(weight_type: str = ""):
+    path = weights_path
+    if not os.path.exists(path):
+        os.mkdirs(path)
+
+    gdown.download(WEIGHTS_URL, weights_path, quiet=False, fuzzy=True)
+    with zipfile.ZipFile(weights_path, "r") as z:
+        z.extractall("weights")
+
+    # Logic to delete other folders based on the weight_type here
+
+
 if __name__ == "__main__":
-    data = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Dataset Setup")
+    parser.add_argument("--data", type=str, choices=["original", "processed"], required=True,
+                        help="Choose which dataset to download: 'original' or 'processed'")
+    parser.add_argument("--weights", type=str,
+                        choices=["unet", "autoencoder_segmentation_fixed", "autoencoder_segmentation_tuned",
+                                 "clip_segmentation_fixed", "clip_segmentation_tuned", "prompt_segmentation"],
+                        help="Specify which model weights to download")
+
+    args = parser.parse_args()
+
+    data = args.data
 
     if data == "original":
         setup_data(False)
     elif data == "processed":
         setup_data(True)
+
+    if args.weights:
+        print(
+            f"Downloading pretrained weights for: {args.weights} (not implemented)")
     else:
-        print("Invalid argument. Please provide 'original' or 'processed' as argument")
+        print("Skipping weights download")
