@@ -447,21 +447,24 @@ if __name__ == "__main__":
         model = Autoencoder()
         model_type = "auto"
     elif model_name == "autoencoder_segmentation":
-        if file_path is not None:
-            selected_encoder = expand_file_path(file_path)
+        if mode == "train":
+            if file_path is not None:
+                selected_encoder = expand_file_path(file_path)
+            else:
+                selected_encoder = load_selected_model(
+                    sub_dir="autoencoder", filters=["encoder"])
+            if selected_encoder:
+                autoencoder = Autoencoder()
+                # Get the encoder half alone for the segmentation task
+                encoder = autoencoder.encoder
+                encoder.load_state_dict(torch.load(
+                    os.path.join(CONSTANTS["WEIGHTS_PATH"],
+                                 "autoencoder", selected_encoder),
+                    weights_only=True, map_location=device
+                ))
+                model = AutoEncoderSegmentation(pretrained_encoder=encoder)
         else:
-            selected_encoder = load_selected_model(
-                sub_dir="autoencoder", filters=["encoder"])
-        if selected_encoder:
-            autoencoder = Autoencoder()
-            # Get the encoder half alone for the segmentation task
-            encoder = autoencoder.encoder
-            encoder.load_state_dict(torch.load(
-                os.path.join(CONSTANTS["WEIGHTS_PATH"],
-                             "autoencoder", selected_encoder),
-                weights_only=True, map_location=device
-            ))
-            model = AutoEncoderSegmentation(pretrained_encoder=encoder)
+            model = AutoEncoderSegmentation()
     elif model_name == "clip_segmentation":
         model = ClipSegmentation(device=device)
     elif model_name == "prompt_segmentation":
