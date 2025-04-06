@@ -4,6 +4,7 @@ from datetime import datetime
 from evaluation.metrics import iou, dice, pixel_accuracy
 from evaluation.robustness import gaussian_noise_transform, gaussian_blur_transform, contrast_modify_transform, brightness_adjust_transform, apply_occlusion, s_and_p_noise_transform
 from models.unet import UNet
+from models.autoencoder import Autoencoder
 from models.autoencoder_segmentation import AutoEncoderSegmentation
 from models.clip_segmentation import ClipSegmentation
 import torch
@@ -268,11 +269,23 @@ if __name__ == "__main__":
         f"List of evaluations configured for running: {eval_methods}")
 
     model_path = load_selected_model(sub_dir=model_name)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if model_name == "unet":
         model = UNet()
     elif model_name == "autoencoder_segmentation":
-        model = AutoEncoderSegmentation()
+        selected_encoder = load_selected_model(
+            sub_dir="autoencoder", filters=["encoder"])
+        if selected_encoder:
+            autoencoder = Autoencoder()
+            # Get the encoder half alone for the segmentation task
+            encoder = autoencoder.encoder
+            encoder.load_state_dict(torch.load(
+                os.path.join(CONSTANTS["WEIGHTS_PATH"],
+                             "autoencoder", selected_encoder),
+                weights_only=True, map_location=device
+            ))
+            model = AutoEncoderSegmentation(pretrained_encoder=encoder)
     elif model_name == "clip":
         model = ClipSegmentation()
 
