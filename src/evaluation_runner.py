@@ -213,14 +213,14 @@ class EvaluationRunner:
         Returns:
             None
         """
-        m_iou = self.get_average_metric(iou, transforms, is_occlusion)
+        # m_iou = self.get_average_metric(iou, transforms, is_occlusion)
         m_dice = self.get_average_metric(dice, transforms, is_occlusion)
-        m_p_acc = self.get_average_metric(
-            pixel_accuracy, transforms, is_occlusion)
+        # m_p_acc = self.get_average_metric(
+        # pixel_accuracy, transforms, is_occlusion)
 
-        results[method][strn]["iou"] = m_iou
+        # results[method][strn]["iou"] = m_iou
         results[method][strn]["dice"] = m_dice
-        results[method][strn]["pixel-accuracy"] = m_p_acc
+        # results[method][strn]["pixel-accuracy"] = m_p_acc
 
     def update_results_json(self, current_dict: dict) -> None:
         """
