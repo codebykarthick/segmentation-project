@@ -142,7 +142,7 @@ def get_seg_data_loaders(batch_size: int = 8, prompt_mode: bool = False):
         The training, validation and the test set loader.
     """
     log.info(
-        f"Creating segmenatation loaders with a batch size of: {batch_size}")
+        f"Creating segmentation loaders with a batch size of: {batch_size}")
     dataset = SegmentationDataset(
         train_image_path, train_mask_path, transform, prompt_mode=prompt_mode)
     train_size = int(TRAIN_VAL_SPLIT * len(dataset))

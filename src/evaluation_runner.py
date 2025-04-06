@@ -263,6 +263,7 @@ if __name__ == "__main__":
 
     model_name = args.model_name
     eval_methods = args.eval_methods
+    batch_size = args.batch_size
 
     log.info(f"Model selected for evaluation: {model_name}")
     log.info(
@@ -291,7 +292,7 @@ if __name__ == "__main__":
 
     runner = EvaluationRunner(model_name=model_name,
                               model=model,
-                              model_path=model_path)
+                              model_path=model_path, batch_size=batch_size)
 
     metrics_list = [i for i in eval_methods if "metrics" in i]
     methods_list = [i for i in eval_methods if "metrics" not in i]
