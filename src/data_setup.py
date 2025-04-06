@@ -11,7 +11,7 @@ DATASET_FILE_URL = "https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_
 # PROCESSED_URL = "https://drive.google.com/file/d/1UAQ8E-YOENu8K-kEkFkEl774hgH8-RiH/view?usp=sharing"
 # 512x512 Resize
 PROCESSED_URL = "https://drive.google.com/file/d/1sVNF0qNFwxaCtkeaICmzhs6PfiaKrGTZ/view?usp=share_link"
-WEIGHTS_URL = ""
+WEIGHTS_URL = "https://drive.google.com/drive/folders/19JZef8HGQHgQy1A_Kf3OBHOf6CHQiZPY?usp=sharing"
 data_path = os.path.join(os.getcwd(), "data")
 processed_data_path = os.path.join(os.getcwd(), "data")
 original_file_path = os.path.join(data_path, "cv_dataset.zip")
@@ -59,11 +59,29 @@ def setup_weights(weight_type: str = ""):
     if not os.path.exists(path):
         os.mkdirs(path)
 
-    gdown.download(WEIGHTS_URL, weights_path, quiet=False, fuzzy=True)
-    with zipfile.ZipFile(weights_path, "r") as z:
+    gdown.download(WEIGHTS_URL, weights_file_path, quiet=False, fuzzy=True)
+    with zipfile.ZipFile(weights_file_path, "r") as z:
         z.extractall("weights")
 
-    # Logic to delete other folders based on the weight_type here
+    # Logic to delete the downloaded zip and other folders based on the weight_type here
+    os.remove(weights_file_path)
+
+    for folder in os.listdir(path):
+        folder_path = os.path.join(path, folder)
+        if os.path.isdir(folder_path):
+            if folder != weight_type:
+                print(f"Removing unused weight folder: {folder}")
+                shutil.rmtree(folder_path)
+            else:
+                # Normalize folder names
+                if "autoencoder" in folder.lower():
+                    new_path = os.path.join(path, "autoencoder_segmentation")
+                    os.rename(folder_path, new_path)
+                    print(f"Renamed {folder} to autoencoder_segmentation")
+                elif "clip" in folder.lower():
+                    new_path = os.path.join(path, "clip_segmentation")
+                    os.rename(folder_path, new_path)
+                    print(f"Renamed {folder} to clip_segmentation")
 
 
 if __name__ == "__main__":
@@ -71,8 +89,8 @@ if __name__ == "__main__":
     parser.add_argument("--data", type=str, choices=["original", "processed"], required=True,
                         help="Choose which dataset to download: 'original' or 'processed'")
     parser.add_argument("--weights", type=str,
-                        choices=["unet", "autoencoder_segmentation_fixed", "autoencoder_segmentation_tuned",
-                                 "clip_segmentation_fixed", "clip_segmentation_tuned", "prompt_segmentation"],
+                        choices=["unet", "autoencoder_seg_encoder_fixed", "autoencoder_seg_encoder_tuned",
+                                 "clip_segmentation_frozen", "clip_segmentation_finetuned", "prompt_segmentation"],
                         help="Specify which model weights to download")
 
     args = parser.parse_args()

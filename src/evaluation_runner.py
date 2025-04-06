@@ -257,7 +257,7 @@ if __name__ == "__main__":
     allowed_models = ["unet", "autoencoder_segmentation",
                       "clip_segmentation", "prompt_segmentation"]
     allowed_evals = ["metrics_iou", "metrics_dice", "metrics_pixel-accuracy", "contrast_inc", "contrast_dec", "occlusion",
-                     "gaussian_noise", "s&p", "gaussian_blur", "brightness_inc", "brightness_dec"]
+                     "gaussian_noise", "sandp", "gaussian_blur", "brightness_inc", "brightness_dec"]
     parser = argparse.ArgumentParser(description="Evaluate model robustness")
 
     parser.add_argument("--model_name", type=str,
