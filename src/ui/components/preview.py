@@ -36,7 +36,7 @@ def clear_prompt(sender, app_data):
 
 def generate_prompt():
     global added_pixels
-    width, height = preview_width // 2, preview_height // 2
+    width, height = preview_width, preview_height
     np.set_printoptions(threshold=np.inf, linewidth=200, suppress=True)
     prompt = np.zeros(shape=(width, height))
     brush_radius = config["brush_size"]
@@ -44,7 +44,7 @@ def generate_prompt():
     log.info(f"Creating mask of size: ({width}x{height})")
 
     for (x, y) in added_pixels:
-        x, y = int(x/2), int(y/2)  # Ensure integer indexing
+        x, y = int(x), int(y)  # Ensure integer indexing
         for dx in range(-brush_radius, brush_radius + 1):
             for dy in range(-brush_radius, brush_radius + 1):
                 if 0 <= x + dx < width and 0 <= y + dy < height:
@@ -61,12 +61,15 @@ def insert_image_into_preview(selected_file, is_prompt):
     if dpg.does_item_exist("preview_image"):
         dpg.delete_item("preview_image")
 
+    if dpg.does_item_exist("preview_texture"):
+        dpg.delete_item("preview_texture")
+
     # Load Image into Dear PyGui
     with dpg.texture_registry():
         width, height, _, data = dpg.load_image(selected_file)
         dpg.add_static_texture(width, height, data, tag="preview_texture")
-        preview_width = width * 2
-        preview_height = height * 2
+        preview_width = width
+        preview_height = height
         prompt_mode = is_prompt
 
     dpg.add_image("preview_texture", parent="img_preview",

@@ -54,22 +54,28 @@ def setup_data(processed: bool = True):
     os.remove(file_path)
 
 
-def setup_weights(weight_type: str = ""):
+def setup_weights(weight_type: str = "", clear_cache: bool = True):
     tmp_path = os.path.join(weights_path, "tmp")
+    if clear_cache:
+        # Clean up the zip file
+        os.remove(weights_file_path)
+        # Clean up temporary directory
+        shutil.rmtree(tmp_path)
+
     if not os.path.exists(tmp_path):
         os.makedirs(tmp_path)
 
-    gdown.download(WEIGHTS_URL, weights_file_path, quiet=False, fuzzy=True)
-    with zipfile.ZipFile(weights_file_path, "r") as z:
-        z.extractall(tmp_path)
-
-    # Clean up the zip file
-    os.remove(weights_file_path)
+    if not os.path.exists(weights_file_path):
+        gdown.download(WEIGHTS_URL, weights_file_path, quiet=False, fuzzy=True)
+        with zipfile.ZipFile(weights_file_path, "r") as z:
+            z.extractall(tmp_path)
 
     # Identify and copy only the required weight folder
-    for folder in os.listdir(tmp_path):
+    tmp_weights_path = os.path.join(tmp_path, "weights")
+    for folder in os.listdir(tmp_weights_path):
+        print(folder)
         if folder == weight_type:
-            src_path = os.path.join(tmp_path, folder)
+            src_path = os.path.join(tmp_weights_path, folder)
 
             # Determine the normalized folder name
             if "autoencoder" in folder.lower():
@@ -91,9 +97,6 @@ def setup_weights(weight_type: str = ""):
             print(f"Copied and renamed {folder} to {dest_folder}")
             break
 
-    # Clean up temporary directory
-    shutil.rmtree(tmp_path)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dataset Setup")
@@ -103,9 +106,10 @@ if __name__ == "__main__":
                         choices=["unet", "autoencoder_seg_encoder_fixed", "autoencoder_seg_encoder_tuned",
                                  "clip_segmentation_frozen", "clip_segmentation_finetuned", "prompt_segmentation"],
                         help="Specify which model weights to download")
+    parser.add_argument("--clear_cache", type=bool, default=False,
+                        help="Clear downloaded zip file and download new.")
 
     args = parser.parse_args()
-
     data = args.data
 
     if data == "original":
@@ -116,6 +120,6 @@ if __name__ == "__main__":
     if args.weights:
         print(
             f"Downloading pretrained weights for: {args.weights}")
-        setup_weights(args.weights)
+        setup_weights(args.weights, args.clear_cache)
     else:
         print("Skipping weights download")

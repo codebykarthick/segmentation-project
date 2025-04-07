@@ -12,11 +12,12 @@ model_to_weights = {
     "UNet": "unet",
     "Autoencoder": "autoencoder_segmentation",
     "CLIP": "clip_segmentation",
-    "Prompt-Based": "sam"
+    "Prompt-Based": "prompt_segmentation"
 }
 
 model_path = None
 model_type = None
+image_path = None
 
 
 def sidebar_callback(sender, app_data):
@@ -44,13 +45,6 @@ def sidebar_callback(sender, app_data):
                          default_path=f"./weights/{model_type}/", default_filename=""):
         dpg.add_file_extension("PyTorch model weights (*.pth){.pth}")
 
-    # Open file dialog for image selection
-    with dpg.file_dialog(directory_selector=False, show=True, callback=image_selected_callback,
-                         width=600, height=400, tag="file_selector",
-                         default_path="./data/processed/Test/color/", default_filename=""):
-        dpg.add_file_extension("JPG Image (*.jpg){.jpg}")
-        dpg.add_file_extension("PNG Image (*.png){.png}")
-
 
 def weights_selected_callback(sender, app_data):
     """
@@ -59,43 +53,52 @@ def weights_selected_callback(sender, app_data):
     global model_path
     model_path = app_data['file_path_name']
     print(f"Loading model weights from path: {model_path}")
+    # Open file dialog for image selection
+    with dpg.file_dialog(directory_selector=False, show=True, callback=image_selected_callback,
+                         width=600, height=400, tag="file_selector",
+                         default_path="./data/processed/Test/color/", default_filename=""):
+        dpg.add_file_extension("JPG Image (*.jpg){.jpg}")
+        dpg.add_file_extension("PNG Image (*.png){.png}")
 
 
 def image_selected_callback(sender, app_data):
     """
     Handle file selection and load the image
     """
-    global prompt_mode
+    global prompt_mode, image_path
 
-    selected_file = app_data['file_path_name']
-    print(f"Selected File: {selected_file}")
-    dpg.set_value("selected_file_text", f"File Selected: {selected_file}")
+    image_path = app_data['file_path_name']
+    print(f"Selected File: {image_path}")
+    dpg.set_value("selected_file_text", f"File Selected: {image_path}")
 
     # Remove Placeholder Text
     if dpg.does_item_exist("preview_placeholder_text"):
         dpg.delete_item("preview_placeholder_text")
 
-    insert_image_into_preview(selected_file, prompt_mode)
+    insert_image_into_preview(image_path, prompt_mode)
 
 
 def segment_image_callback(sender, app_data):
     """
     Runs the segmentation model and replaces the image with the segmentation result
     """
-    global prompt_mode, model_type, model_path
+    global prompt_mode, model_type, model_path, image_path
     log.info("Running segmentation")
-
-    img_path = dpg.get_value("selected_file_text")
 
     # Check if this prompt is accurate for the provided image by dumping
     if prompt_mode == True:
         prompt = generate_prompt()
         # Add the prompt to the input image as a 4th dimension
         # and then segment it
+    else:
+        prompt = None
 
     # We have the image ready segment it.
     final_mask_path = create_model_and_segment(
-        img_path, model_type, model_path)
+        image_path, model_type, model_path, prompt_mode, prompt)
+
+    if prompt_mode == True:
+        clear_prompt(sender, app_data)
     insert_image_into_preview(final_mask_path, prompt_mode)
 
 
