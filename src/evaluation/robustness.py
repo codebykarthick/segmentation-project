@@ -6,7 +6,7 @@ from skimage.util import random_noise
 from typing import Tuple
 
 
-def _add_gaussian_pixel_noise(image: torch.Tensor, std_dev: float = 0.0, noise_type: str = 'gaussian', noise_ratio: float = 0.00) -> torch.Tensor:
+def _add_gaussian_pixel_noise(image: torch.Tensor, std_dev: float = 0.0, noise_type: str = 'gaussian', noise_ratio: float = 0.00, amount: float = 0.05) -> torch.Tensor:
     """
     Adds noise to a PyTorch image tensor.
 
@@ -17,21 +17,27 @@ def _add_gaussian_pixel_noise(image: torch.Tensor, std_dev: float = 0.0, noise_t
         std_dev (float, optional): Standard deviation for Gaussian noise. Defaults to 0.0.
         noise_type (str, optional): Type of noise to apply ('gaussian' for Gaussian noise, 's&p' for salt & pepper noise). Defaults to 'gaussian'.
         noise_ratio (float, optional): Ratio of salt vs. pepper noise (applicable only when noise_type is 's&p'). Defaults to 0.00.
+        amount (float, optional): Amount of salt and pepper noise to add. Defaults to 0.05.
 
     Returns:
         torch.Tensor: The image tensor with added noise, in the same format as the input.
     """
-    image_np = (image.permute(1, 2, 0).cpu().numpy()) * 255.0
+    image_np = image.permute(1, 2, 0).cpu().numpy()
 
     if noise_type == 's&p':
-        noisy_image = random_noise(
-            image_np, mode="s&p", salt_vs_pepper=noise_ratio)
+        print(f"Adding salt and pepper noise with ratio: {noise_ratio}")
+        # Convert to grayscale to avoid color speckles, then replicate to all channels
+        grayscale = np.mean(image_np, axis=2)
+        sp_mask = random_noise(
+            grayscale, mode="s&p", amount=amount, salt_vs_pepper=noise_ratio, clip=True)
+        noisy_image = np.stack([sp_mask] * image_np.shape[2], axis=2)
     else:  # Default to Gaussian noise
+        print(f"Adding gaussian noise of: {std_dev}")
         noisy_image = random_noise(
             image_np, mode="gaussian", mean=0, var=(std_dev**2))
 
-    processed_tensor = torch.tensor(
-        noisy_image / 255.0).permute(2, 0, 1).to(image.dtype).to(image.device)
+    processed_tensor = torch.tensor(noisy_image).permute(
+        2, 0, 1).to(image.dtype).to(image.device)
 
     return processed_tensor
 
@@ -50,18 +56,19 @@ def gaussian_noise_transform(std_dev: float = 0.0) -> transforms.Lambda:
         image=img, std_dev=std_dev, noise_type='gaussian'))
 
 
-def s_and_p_noise_transform(noise_ratio: float = 0.00) -> transforms.Lambda:
+def s_and_p_noise_transform(noise_ratio: float = 0.00, amount: float = 0.05) -> transforms.Lambda:
     """
     Creates a transform that applies salt & pepper noise to an image tensor.
 
     Args:
         noise_ratio (float, optional): Ratio of salt vs. pepper noise. Defaults to 0.00.
+        amount (float, optional): Amount of salt and pepper noise to add. Defaults to 0.05.
 
     Returns:
         torchvision.transforms.Lambda: A transform that applies salt & pepper noise.
     """
     return transforms.Lambda(lambda img: _add_gaussian_pixel_noise(
-        image=img, noise_type='s&p', noise_ratio=noise_ratio))
+        image=img, noise_type='s&p', noise_ratio=noise_ratio, amount=amount))
 
 
 def _apply_gaussian_blur(image: torch.Tensor, num_iterations: int = 1) -> torch.Tensor:
@@ -212,8 +219,8 @@ def apply_occlusion(image_batch: torch.Tensor, mask_batch: torch.Tensor, occlusi
 
     for i in range(n):
         # Select a random top-left coordinate for occlusion (per image)
-        x_start = np.random.randint(0, w - occlusion_size)
-        y_start = np.random.randint(0, h - occlusion_size)
+        x_start = np.random.randint(0, max(1, w - occlusion_size + 1))
+        y_start = np.random.randint(0, max(1, h - occlusion_size + 1))
 
         # Apply occlusion (set pixels to 0)
         image_batch[i, :, y_start:y_start+occlusion_size,
