@@ -6,40 +6,45 @@ from skimage.util import random_noise
 from typing import Tuple
 
 
-def _add_gaussian_pixel_noise(image: torch.Tensor, std_dev: float = 0.0, noise_type: str = 'gaussian', noise_ratio: float = 0.00, amount: float = 0.05) -> torch.Tensor:
+def _add_gaussian_pixel_noise(image: torch.Tensor, std_dev: float = 0.0, noise_type: str = 'gaussian', noise_ratio: float = 0.0, amount: float = 0.05) -> torch.Tensor:
     """
     Adds noise to a PyTorch image tensor.
 
-    Depending on the specified noise_type, either Gaussian noise or salt & pepper noise is applied.
-
     Args:
-        image (torch.Tensor): Image tensor with shape (C, H, W) and pixel values in [0, 1] or [0, 255].
-        std_dev (float, optional): Standard deviation for Gaussian noise. Defaults to 0.0.
-        noise_type (str, optional): Type of noise to apply ('gaussian' for Gaussian noise, 's&p' for salt & pepper noise). Defaults to 'gaussian'.
-        noise_ratio (float, optional): Ratio of salt vs. pepper noise (applicable only when noise_type is 's&p'). Defaults to 0.00.
-        amount (float, optional): Amount of salt and pepper noise to add. Defaults to 0.05.
+        image (torch.Tensor): Image tensor with shape (C, H, W) and pixel values in [0, 1].
+        std_dev (float, optional): Standard deviation for Gaussian noise in pixel scale (0–255). Defaults to 0.0.
+        noise_type (str, optional): 'gaussian' or 's&p'. Defaults to 'gaussian'.
+        noise_ratio (float, optional): Salt-vs-pepper ratio for S&P noise. Defaults to 0.0.
+        amount (float, optional): Fraction of pixels to alter for S&P. Defaults to 0.05.
 
     Returns:
-        torch.Tensor: The image tensor with added noise, in the same format as the input.
+        torch.Tensor: Image tensor with noise added, in same shape and dtype, pixel values in [0, 1].
     """
     image_np = image.permute(1, 2, 0).cpu().numpy()
+    image_np = image_np * 255.0  # Convert to pixel scale
 
     if noise_type == 's&p':
-        print(f"Adding salt and pepper noise with ratio: {noise_ratio}")
-        # Convert to grayscale to avoid color speckles, then replicate to all channels
-        grayscale = np.mean(image_np, axis=2)
-        sp_mask = random_noise(
-            grayscale, mode="s&p", amount=amount, salt_vs_pepper=noise_ratio, clip=True)
-        noisy_image = np.stack([sp_mask] * image_np.shape[2], axis=2)
-    else:  # Default to Gaussian noise
-        print(f"Adding gaussian noise of: {std_dev}")
-        noisy_image = random_noise(
-            image_np, mode="gaussian", mean=0, var=(std_dev**2))
+        print(
+            f"Adding salt and pepper noise with ratio: {noise_ratio}, amount: {amount}")
+        h, w, c = image_np.shape
 
-    processed_tensor = torch.tensor(noisy_image).permute(
-        2, 0, 1).to(image.dtype).to(image.device)
+        # Create grayscale S&P mask
+        mask = random_noise(np.mean(image_np, axis=2) / 255.0,
+                            mode='s&p', amount=amount, salt_vs_pepper=noise_ratio)
+        mask = np.clip(mask * 255.0, 0, 255)
 
-    return processed_tensor
+        # Broadcast to RGB
+        noisy_image = np.stack([mask] * c, axis=2)
+    else:
+        print(f"Adding gaussian noise of std: {std_dev}")
+        noise = np.random.normal(0, std_dev, size=image_np.shape)
+        noisy_image = image_np + noise
+        noisy_image = np.clip(noisy_image, 0, 255)
+
+    # Convert back to tensor in [0, 1]
+    noisy_image = torch.tensor(
+        noisy_image / 255.0).permute(2, 0, 1).to(image.dtype).to(image.device)
+    return noisy_image
 
 
 def gaussian_noise_transform(std_dev: float = 0.0) -> transforms.Lambda:
