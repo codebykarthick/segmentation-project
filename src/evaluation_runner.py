@@ -16,7 +16,7 @@ from util.data_loader import get_seg_data_loaders
 from util.model_handler import load_selected_model
 import json
 from tqdm import tqdm
-from typing import Callable, Optional, Dict, Any, List, Union
+from typing import Callable, Dict, Any, List, Union
 
 log = logger.setup_logger()
 
@@ -106,7 +106,7 @@ class EvaluationRunner:
 
         self.update_results_json(results)
 
-    def get_average_metric(self, metric_fn: Callable, transforms=None, is_occlusion: bool = False) -> Dict[Any, float]:
+    def get_average_metric(self, metric_fn: Callable, trs=None, is_occlusion: bool = False) -> Dict[Any, float]:
         """
         Compute the average value for a given metric function (IoU, Dice, or Pixel Accuracy) over the test set.
 
@@ -128,8 +128,8 @@ class EvaluationRunner:
                 # Apply occlusion or transforms if specified
                 if is_occlusion:
                     images, masks = apply_occlusion(images, masks)
-                elif transforms:
-                    images = transforms(images)
+                elif trs:
+                    images = torch.stack([trs(img) for img in images])
 
                 preds = self.model(images)
                 preds = torch.softmax(preds, dim=1)
@@ -157,7 +157,6 @@ class EvaluationRunner:
         if len(methods) == 0:
             return
         results = {}
-        results["methods"] = {}
         log.info("Evaluating performance on perturbations.")
 
         for method in methods:
@@ -184,7 +183,7 @@ class EvaluationRunner:
             elif method == "occlusion":
                 items = CONSTANTS["OCCLUSION_SIZE_RANGE"]
                 is_occlusion = True
-            elif method == "s&p":
+            elif method == "sandp":
                 items = CONSTANTS["S&P_NOISE_RANGE"]
                 tfrm = s_and_p_noise_transform
 
@@ -194,12 +193,12 @@ class EvaluationRunner:
                 log.info(f"Current strength: {item}")
                 results[method][item] = {}
                 self.test_perturbation(
-                    method, item, results, tfrm(item), is_occlusion)
+                    method, item, results, tfrm, is_occlusion)
 
             log.info(f"{method} at {item} over, updating JSON.")
             self.update_results_json(results)
 
-    def test_perturbation(self, method: str, strn: Union[str, int], results: dict, transforms=None, is_occlusion: bool = False) -> None:
+    def test_perturbation(self, method: str, strn: str, results: dict, trs=None, is_occlusion: bool = False) -> None:
         """
         Test a perturbation method by applying it to the test set and computing metrics.
 
@@ -214,7 +213,7 @@ class EvaluationRunner:
             None
         """
         # m_iou = self.get_average_metric(iou, transforms, is_occlusion)
-        m_dice = self.get_average_metric(dice, transforms, is_occlusion)
+        m_dice = self.get_average_metric(dice, trs(strn), is_occlusion)
         # m_p_acc = self.get_average_metric(
         # pixel_accuracy, transforms, is_occlusion)
 

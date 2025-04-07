@@ -55,33 +55,44 @@ def setup_data(processed: bool = True):
 
 
 def setup_weights(weight_type: str = ""):
-    path = weights_path
-    if not os.path.exists(path):
-        os.mkdirs(path)
+    tmp_path = os.path.join(weights_path, "tmp")
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
 
     gdown.download(WEIGHTS_URL, weights_file_path, quiet=False, fuzzy=True)
     with zipfile.ZipFile(weights_file_path, "r") as z:
-        z.extractall("weights")
+        z.extractall(tmp_path)
 
-    # Logic to delete the downloaded zip and other folders based on the weight_type here
+    # Clean up the zip file
     os.remove(weights_file_path)
 
-    for folder in os.listdir(path):
-        folder_path = os.path.join(path, folder)
-        if os.path.isdir(folder_path):
-            if folder != weight_type:
-                print(f"Removing unused weight folder: {folder}")
-                shutil.rmtree(folder_path)
+    # Identify and copy only the required weight folder
+    for folder in os.listdir(tmp_path):
+        if folder == weight_type:
+            src_path = os.path.join(tmp_path, folder)
+
+            # Determine the normalized folder name
+            if "autoencoder" in folder.lower():
+                dest_folder = "autoencoder_segmentation"
+            elif "clip" in folder.lower():
+                dest_folder = "clip_segmentation"
             else:
-                # Normalize folder names
-                if "autoencoder" in folder.lower():
-                    new_path = os.path.join(path, "autoencoder_segmentation")
-                    os.rename(folder_path, new_path)
-                    print(f"Renamed {folder} to autoencoder_segmentation")
-                elif "clip" in folder.lower():
-                    new_path = os.path.join(path, "clip_segmentation")
-                    os.rename(folder_path, new_path)
-                    print(f"Renamed {folder} to clip_segmentation")
+                dest_folder = folder
+
+            dest_path = os.path.join(weights_path, dest_folder)
+
+            # Remove any existing destination folder
+            if os.path.exists(dest_path):
+                print(f"Removing existing weight folder: {dest_folder}")
+                shutil.rmtree(dest_path)
+
+            # Move and rename
+            shutil.move(src_path, dest_path)
+            print(f"Copied and renamed {folder} to {dest_folder}")
+            break
+
+    # Clean up temporary directory
+    shutil.rmtree(tmp_path)
 
 
 if __name__ == "__main__":
