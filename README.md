@@ -2,7 +2,7 @@
 CV for sem 2 for MSc AI stream. Mini project constitutes for 50% of the final coursework grade.
 
 ## Setup
-Create a virtual environment (ideally conda) and install the packages listed in the requirements.txt file for the successful execution of the project. This assumes your environment has the suitable version of pytorch compiled and installed in your env corresponding to your device (cpu or cuda).
+Create a virtual environment (ideally conda) and install the packages listed in the requirements.txt file for the successful execution of the project. This assumes your environment has the suitable version of pytorch (version 2.6.0) compiled and installed in your env corresponding to your device (cpu or cuda).
 
 ## Miscellaneous
 Jupyter notebooks under `experiments/` give some extra background information on the design choices made for the scope of the project.
@@ -12,8 +12,8 @@ Jupyter notebooks under `experiments/` give some extra background information on
 Dataset contains a large number of images and masks, therefore is not maintained directly on the repository for performance reasons. Therefore to setup dataset run the following
 
 ```bash
-python3 data_setup.py original # Downloads the original dataset
-python3 data_setup.py processed # Downloads the processed dataset
+python3 data_setup.py --data original # Downloads the original dataset
+python3 data_setup.py --data processed # Downloads the processed dataset
 ```
 
 ### Augmentation:
@@ -31,6 +31,15 @@ data/
 ```bash
 python3 preprocess_augment.py
 ```
+
+### Downloading Trained Weights
+For testing, the program also allows for downloading of weights from training done beforehand for all the architectures. To get it run
+
+```bash
+python3 data_setup.py --weights {unet, autoencoder_seg_encoder_fixed, autoencoder_seg_encoder_tuned,   clip_segmentation_frozen, clip_segmentation_finetuned, prompt_segmentation} 
+```
+
+Depending on the type of model you need to test.
 
 ### Training and Validation
 To perform training and validation using training set and then evaluate the performance in CrossEntropy loss using TestSet to get an estimate run the following in the `src/` directory
