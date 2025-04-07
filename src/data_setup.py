@@ -97,7 +97,7 @@ def setup_weights(weight_type: str = ""):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dataset Setup")
-    parser.add_argument("--data", type=str, choices=["original", "processed"], required=True,
+    parser.add_argument("--data", type=str, choices=["original", "processed"],
                         help="Choose which dataset to download: 'original' or 'processed'")
     parser.add_argument("--weights", type=str,
                         choices=["unet", "autoencoder_seg_encoder_fixed", "autoencoder_seg_encoder_tuned",

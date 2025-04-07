@@ -11,4 +11,4 @@ pip install -r requirements.txt
 
 # Download the processed dataset
 cd src/
-python data_setup.py processed
+python data_setup.py --data processed
