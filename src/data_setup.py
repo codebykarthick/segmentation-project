@@ -115,6 +115,7 @@ if __name__ == "__main__":
 
     if args.weights:
         print(
-            f"Downloading pretrained weights for: {args.weights} (not implemented)")
+            f"Downloading pretrained weights for: {args.weights}")
+        setup_weights(args.weights)
     else:
         print("Skipping weights download")
