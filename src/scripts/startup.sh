@@ -11,6 +11,10 @@ mkdir -p ~/Developer/Projects/Uni
 cd ~/Developer/Projects/Uni
 git clone git@git.ecdf.ed.ac.uk:s2681395/cv-mini-project.git
 
+git config --global pull.rebase true
+git config --global user.name "Sri Hari Karthick"
+git config --global user.email "s2681395@ed.ac.uk"
+
 # Cd and run the setup
 cd cv-mini-project/src/scripts/
 sh cloud.sh
