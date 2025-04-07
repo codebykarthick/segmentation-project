@@ -11,7 +11,7 @@ DATASET_FILE_URL = "https://drive.google.com/file/d/1CIryq76zXU3ms0Rbpnf_WaL4S7_
 # PROCESSED_URL = "https://drive.google.com/file/d/1UAQ8E-YOENu8K-kEkFkEl774hgH8-RiH/view?usp=sharing"
 # 512x512 Resize
 PROCESSED_URL = "https://drive.google.com/file/d/1sVNF0qNFwxaCtkeaICmzhs6PfiaKrGTZ/view?usp=share_link"
-WEIGHTS_URL = "https://drive.google.com/drive/folders/19JZef8HGQHgQy1A_Kf3OBHOf6CHQiZPY?usp=sharing"
+WEIGHTS_URL = "https://drive.google.com/file/d/182I64mODfRpapaY5kpGYt6MH4W4kHR76/view?usp=sharing"
 data_path = os.path.join(os.getcwd(), "data")
 processed_data_path = os.path.join(os.getcwd(), "data")
 original_file_path = os.path.join(data_path, "cv_dataset.zip")

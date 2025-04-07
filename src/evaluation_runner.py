@@ -13,7 +13,7 @@ import torch.backends.cudnn as cudnn
 from util import logger
 from util.constants import CONSTANTS
 from util.data_loader import get_seg_data_loaders
-from util.model_handler import load_selected_model
+from util.model_handler import expand_file_path, load_selected_model
 import json
 from tqdm import tqdm
 from typing import Callable, Dict, Any, List, Union
@@ -264,6 +264,8 @@ if __name__ == "__main__":
                         default="unet", choices=allowed_models)
     parser.add_argument("--batch_size", type=int,
                         help="Size of the batch to be used for the dataloader for metrics.")
+    parser.add_argument("--weight", type=str,
+                        help="Name of the weight file to be used for loading the model.")
     parser.add_argument("--eval_methods", nargs="+",
                         help=f"List of eval methods. Allowed options: {', '.join(allowed_evals)}")
 
@@ -272,12 +274,16 @@ if __name__ == "__main__":
     model_name = args.model_name
     eval_methods = args.eval_methods
     batch_size = args.batch_size
+    file_name = args.weight
 
     log.info(f"Model selected for evaluation: {model_name}")
     log.info(
         f"List of evaluations configured for running: {eval_methods}")
 
-    model_path = load_selected_model(sub_dir=model_name)
+    if file_name is None:
+        model_path = load_selected_model(sub_dir=model_name)
+    else:
+        model_path = expand_file_path(os.path.join(".", model_name, file_name))
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if model_name == "unet":
