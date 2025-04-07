@@ -38,7 +38,7 @@ def generate_prompt():
     global added_pixels
     width, height = preview_width, preview_height
     np.set_printoptions(threshold=np.inf, linewidth=200, suppress=True)
-    prompt = np.zeros(shape=(width, height))
+    prompt = np.zeros(shape=(height, width))
     brush_radius = config["brush_size"]
 
     log.info(f"Creating mask of size: ({width}x{height})")
@@ -94,7 +94,7 @@ def on_mouse_drag(sender, app_data):
     if dpg.is_key_down(dpg.mvKey_LShift) or dpg.is_key_down(dpg.mvKey_RShift):
         x, y = dpg.get_mouse_pos(local=True)
         # To account for the border offset and preview zooming.
-        x, y = (x-10), (y-10)
+        # x, y = (x-10), (y-10)
         if ((x > 0 and x <= preview_width) and (y > 0 and y <= preview_height)):
             added_pixels.append((x, y))
 
